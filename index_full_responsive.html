@@ -1,15 +1,3037 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<!doctype html>
+<html lang="en" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lam3Code | منصة تعليم البرمجة (Responsive)</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* كل كود CSS الكامل من النسخة الريسبونسيف */
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SOLDOC Virtual Farm — Your Farm. Your Decisions. Your Future.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        forest: '#163D32', deep: '#102A24', secondary: '#477A5C',
+        sage: '#A8C3A0', lightsage: '#E8EFE5', canvas: '#F5F7F3',
+        ink: '#1D2923', muted: '#6B776F', line: '#E1E8DF',
+        warn: '#E6A23C', danger: '#D95C5C', info: '#4A86B8'
+      },
+      fontFamily: { sans: ['Inter', 'IBM Plex Sans Arabic', 'system-ui', 'sans-serif'] },
+      boxShadow: {
+        card: '0 1px 2px rgba(16,42,36,0.04), 0 4px 16px rgba(16,42,36,0.05)',
+        lift: '0 8px 28px rgba(16,42,36,0.10)'
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter','IBM Plex Sans Arabic',system-ui,sans-serif; background:#F5F7F3; color:#1D2923; }
+  html[dir="rtl"] body { font-family: 'IBM Plex Sans Arabic','Inter',system-ui,sans-serif; }
+  .leaflet-container { font-family: inherit; border-radius: 12px; z-index: 0; }
+  .leaflet-tooltip.field-tooltip {
+    background: rgba(22,61,50,0.92); color:#fff; border:none; border-radius:6px;
+    font-size:11px; font-weight:600; padding:2px 6px; box-shadow:none;
+  }
+  .leaflet-tooltip.field-tooltip::before { display:none; }
+  .scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background:#cdd8cb; border-radius:3px; }
+  input[type=range] { accent-color: #477A5C; }
+  @media print {
+    .no-print { display:none !important; }
+    body { background:#fff; }
+    .print-page { box-shadow:none !important; border:none !important; margin:0 !important; padding:0 !important; }
+  }
+</style>
 </head>
 <body>
-    <!-- هنا باقي محتوى الصفحة الكامل من الكانفس -->
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback, useContext, createContext } = React;
+
+/* ============================================================
+   ICONS
+============================================================ */
+const ICON_PATHS = {
+  home: 'M3 9.5L12 3l9 6.5V20a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 20z',
+  map: ['M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z', 'M9 3v15', 'M15 6v15'],
+  layers: ['M12 2 2 7l10 5 10-5-10-5z', 'M2 12l10 5 10-5', 'M2 17l10 5 10-5'],
+  target: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z', 'M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  compare: ['M3 3v18h18', 'M7 16v-4', 'M12 16V8', 'M17 16v-7'],
+  flask: ['M9 3h6', 'M10 3v6L4 19a2 2 0 0 0 1.7 3h12.6A2 2 0 0 0 20 19L14 9V3'],
+  file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6', 'M8 13h8', 'M8 17h6'],
+  coins: ['M12 8c4.97 0 9-1.34 9-3s-4.03-3-9-3-9 1.34-9 3 4.03 3 9 3z', 'M21 12c0 1.66-4 3-9 3s-9-1.34-9-3', 'M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5'],
+  shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
+  settings: ['M4 21v-7','M4 10V3','M12 21v-9','M12 8V3','M20 21v-5','M20 12V3','M1 14h6','M9 8h6','M17 16h6'],
+  help: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3', 'M12 17h.01'],
+  user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'],
+  bell: ['M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 0 1-3.46 0'],
+  search: ['M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', 'M21 21l-4.35-4.35'],
+  globe: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M2 12h20', 'M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z'],
+  chevronDown: 'M6 9l6 6 6-6',
+  chevronRight: 'M9 18l6-6-6-6',
+  plus: ['M12 5v14', 'M5 12h14'],
+  check: 'M20 6L9 17l-5-5',
+  x: ['M18 6L6 18', 'M6 6l12 12'],
+  edit: ['M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7', 'M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z'],
+  trash: ['M3 6h18', 'M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', 'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6', 'M10 11v6', 'M14 11v6'],
+  download: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'M7 10l5 5 5-5', 'M12 15V3'],
+  printer: ['M6 9V2h12v7', 'M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2', 'M6 14h12v8H6z'],
+  info: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 16v-4', 'M12 8h.01'],
+  alert: ['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z', 'M12 9v4', 'M12 17h.01'],
+  droplet: 'M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z',
+  thermometer: 'M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z',
+  leaf: ['M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z', 'M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'],
+  rain: ['M16 13v8', 'M8 13v8', 'M12 15v8', 'M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25'],
+  sun: ['M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z', 'M12 1v2', 'M12 21v2', 'M4.22 4.22l1.42 1.42', 'M18.36 18.36l1.42 1.42', 'M1 12h2', 'M21 12h2', 'M4.22 19.78l1.42-1.42', 'M18.36 5.64l1.42-1.42'],
+  sprout: ['M7 20h10', 'M12 20V10', 'M12 10a5 5 0 0 0-5-5H4a5 5 0 0 0 5 5h3z', 'M12 10a5 5 0 0 1 5-5h3a5 5 0 0 1-5 5h-3z'],
+  trending: ['M23 6l-9.5 9.5-5-5L1 18', 'M17 6h6v6'],
+  lock: ['M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z', 'M7 11V7a5 5 0 0 1 10 0v4'],
+  menu: ['M3 12h18', 'M3 6h18', 'M3 18h18'],
+  arrowRight: ['M5 12h14', 'M12 5l7 7-7 7'],
+  calendar: ['M8 2v4', 'M16 2v4', 'M3 10h18', 'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'],
+  crosshair: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M22 12h-4', 'M6 12H2', 'M12 6V2', 'M12 22v-4'],
+  polygon: 'M12 2l9 7-3 11H6L3 9z',
+  save: ['M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z', 'M17 21v-8H7v8', 'M7 3v5h8'],
+  rotate: ['M1 4v6h6', 'M23 20v-6h-6', 'M20.49 9A9 9 0 0 0 5.64 5.64L1 10', 'M3.51 15a9 9 0 0 0 14.85 3.36L23 14'],
+  satellite: ['M13 7l4 4', 'M4 10l7-7 7 7-7 7z'],
+  grid: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'],
+  weigh: ['M12 3v18', 'M5 21h14', 'M3 8l4-4 4 4', 'M13 8l4-4 4 4'],
+  star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z',
+  clock: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 6v6l4 2'],
+  cornerUpLeft: ['M9 14L4 9l5-5', 'M4 9h10a6 6 0 0 1 6 6v4'],
+  eraser: ['M20 20H7L3 16l10-10a2.83 2.83 0 0 1 4 4L9 18', 'M6 12l6 6'],
+};
+function Icon({ name, size = 18, className = '', strokeWidth = 1.8, style }) {
+  const d = ICON_PATHS[name];
+  if (!d) return null;
+  const paths = Array.isArray(d) ? d : [d];
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}
+      style={style} aria-hidden="true">
+      {paths.map((p, i) => <path key={i} d={p} />)}
+    </svg>
+  );
+}
+
+/* ============================================================
+   I18N
+============================================================ */
+const I18N = {
+  en: {
+    'brand': 'SOLDOC', 'brandSub': 'VIRTUAL FARM',
+    'tagline': 'Your Farm. Your Decisions. Your Future.',
+    'demoData': 'DEMO DATA — NOT LIVE OBSERVATIONS',
+    'nav.overview': 'Overview', 'nav.farms': 'My Farms', 'nav.mapping': 'Farm Mapping',
+    'nav.intel': 'Farm Intelligence', 'nav.goals': 'Farmer Goals', 'nav.strategy': 'Strategy Comparison',
+    'nav.simulator': 'What-if Simulator', 'nav.economics': 'Economic Planner', 'nav.review': 'Agronomist Review',
+    'nav.reports': 'Decision Reports', 'nav.settings': 'Settings', 'nav.help': 'Help Center', 'nav.profile': 'User Profile',
+    'action.exploreFarm': 'Explore Your Farm', 'action.howItWorks': 'Discover How It Works',
+    'action.startExploring': 'Start Exploring', 'action.continue': 'Continue', 'action.save': 'Save',
+    'action.cancel': 'Cancel', 'action.generate': 'Generate', 'action.download': 'Download PDF',
+    'action.print': 'Print Report', 'action.newFarm': 'Create New Farm', 'action.open': 'Open',
+    'action.edit': 'Edit', 'action.delete': 'Delete', 'action.saveField': 'Save Field',
+    'action.reset': 'Reset', 'action.equalize': 'Distribute Equally', 'action.savePriorities': 'Save Priorities',
+    'action.requestReview': 'Request Agronomist Review', 'action.viewExplanation': 'View Explanation',
+    'action.undo': 'Undo Last Point', 'action.clear': 'Clear Drawing', 'action.finish': 'Finish Field',
+    'action.startDraw': 'Draw Field', 'action.editField': 'Edit Field',
+    'role.farmer': 'Farmer', 'role.agronomist': 'Agronomist', 'role.admin': 'Administrator',
+    'landing.heroTitle': 'Understand Your Land. Make Smarter Decisions.',
+    'landing.heroSub': 'Turn satellite intelligence and environmental data into clearer agricultural decisions. Explore your farm, compare strategies, and prepare for changing climate conditions.',
+    'landing.featuresTitle': 'Built for evidence-based farming',
+    'landing.howTitle': 'How it works', 'landing.dataTitle': 'Data & Technology',
+    'landing.dataNote': 'SOLDOC does not claim NASA validation or endorsement of agricultural strategies. Data sources are used for environmental context only.',
+    'landing.finalTitle': 'Your farm deserves decisions backed by evidence.',
+    'dash.welcome': 'Welcome back, Farmer.', 'dash.welcomeSub': "Here's an overview of your farm intelligence.",
+    'kpi.area': 'Total Farm Area', 'kpi.fields': 'Active Fields', 'kpi.dataStatus': 'Environmental Data Status',
+    'kpi.strategy': 'Current Strategy Status', 'kpi.areaUnit': 'hectares', 'kpi.fieldsUnit': 'fields',
+    'kpi.partial': 'Partial coverage', 'kpi.ready': 'Ready', 'kpi.limited': 'Limited',
+    'kpi.noStrategy': 'No strategy selected', 'kpi.candidate': 'Candidate strategy',
+    'section.farmMap': 'Farm Overview Map', 'section.envOverview': 'Environmental Overview',
+    'section.recent': 'Recent Activity', 'section.insights': 'Insights & Alerts',
+    'intel.title': 'Farm Intelligence',
+    'intel.sub': 'Environmental indicators affecting the selected field. Every dataset is labelled with source, period, resolution and confidence.',
+    'intel.temperature': 'Temperature', 'intel.rainfall': 'Rainfall', 'intel.soil': 'Soil Moisture', 'intel.ndvi': 'Vegetation Health (NDVI)',
+    'intel.avg': 'Average', 'intel.min': 'Minimum', 'intel.max': 'Maximum', 'intel.total': 'Total',
+    'intel.details': 'Details', 'intel.source': 'Data source', 'intel.period': 'Observation period',
+    'intel.resolution': 'Spatial resolution', 'intel.temporal': 'Temporal resolution', 'intel.confidence': 'Confidence',
+    'intel.type': 'Value type', 'intel.observed': 'Observed (demo)', 'intel.calculated': 'Calculated',
+    'intel.limitations': 'Data limitations',
+    'intel.ndviWarn': 'NDVI alone must never be treated as a definitive diagnosis of crop disease, pests or nutrient deficiency. It reflects vegetation vigour, not cause.',
+    'intel.soilWarn': 'Satellite soil moisture products may have a spatial resolution too coarse to represent individual small agricultural fields accurately.',
+    'intel.noFieldTitle': 'No field selected',
+    'intel.noFieldBody': 'Select a field in the top bar, or draw a new field in Farm Mapping to begin.',
+    'goals.title': 'What Matters Most to You This Season?',
+    'goals.sub': 'Every farm has different priorities. Customize your goals to generate agricultural strategies aligned with your needs.',
+    'goals.total': 'Total weight', 'goals.constraints': 'Farming Constraints',
+    'goals.constraintsSub': 'Hard constraints must be satisfied by any feasible strategy. Soft preferences influence ranking only.',
+    'goals.hard': 'Hard constraint', 'goals.soft': 'Soft preference',
+    'goals.summary': 'Goal Summary', 'goals.mustEqual100': 'Priority weights must total 100% before saving.',
+    'strategy.title': 'Compare Your Agricultural Strategies',
+    'strategy.sub': 'Explore different approaches and understand their environmental and practical trade-offs.',
+    'strategy.why': 'Why This Strategy?', 'strategy.scoring': 'Explainable Scoring', 'strategy.confidence': 'Confidence',
+    'strategy.suitability': 'Suitability', 'strategy.sensitivity': 'Sensitivity Analysis',
+    'strategy.criterion': 'Criterion', 'strategy.raw': 'Raw', 'strategy.normalized': 'Normalized',
+    'strategy.weight': 'Weight', 'strategy.contribution': 'Contribution', 'strategy.final': 'Final score',
+    'strategy.infeasible': 'Not recommended', 'strategy.violates': 'Violates',
+    'strategy.missingData': 'Missing data', 'strategy.topFeasible': 'Top feasible',
+    'strategy.noFeasible': 'No feasible strategy currently — resolve the hard-constraint violations below before ranking.',
+    'strategy.fieldContext': 'Evaluated for', 'strategy.notRanked': 'not ranked (infeasible)',
+    'strategy.evaluatingFor': 'Field context',
+    'sim.title': 'What If Conditions Change?',
+    'sim.sub': 'Explore how different environmental and economic conditions may influence your agricultural strategy.',
+    'sim.baseline': 'Baseline scenario', 'sim.modified': 'Modified scenario', 'sim.difference': 'Difference',
+    'sim.note': 'This is an illustrative decision-support simulator. Outputs are not validated crop yield forecasts or guaranteed financial results. Score changes are heuristic.',
+    'sim.whyChanged': 'Why results changed', 'sim.scoreChange': 'Score change', 'sim.rankChange': 'Rank',
+    'sim.noChanges': 'No changes yet — move any slider to see strategy scores respond.',
+    'reports.title': 'Decision Reports',
+    'reports.sub': 'A comprehensive, printable report of the selected field, goals, constraints and strategy results.',
+    'reports.sections': 'Report Sections', 'reports.generated': 'Generated', 'reports.farm': 'Farm',
+    'review.title': 'Agronomist Review',
+    'review.sub': 'An expert review is required before applying unvalidated agricultural recommendations.',
+    'settings.title': 'Settings', 'settings.sub': 'Account, preferences, display and data settings for this demo.',
+    'lang.en': 'English', 'lang.ar': 'العربية',
+    'common.hectares': 'ha', 'common.acres': 'ac', 'common.fields': 'fields',
+    'common.low': 'Low', 'common.medium': 'Medium', 'common.high': 'High',
+    'common.yes': 'Yes', 'common.no': 'No', 'common.none': 'None', 'common.all': 'All',
+    'common.updated': 'Updated', 'common.location': 'Location', 'common.crop': 'Crop',
+    'common.season': 'Season', 'common.soil': 'Soil', 'common.irrigation': 'Irrigation',
+    'common.area': 'Area', 'common.notes': 'Notes', 'common.close': 'Close',
+    'common.required': 'Required', 'common.field': 'Field', 'common.noField': 'No field',
+    'common.planting': 'Planting date', 'common.farm': 'Farm',
+    'map.modeIdle': 'View mode — click a field on the map to select it',
+    'map.modeDraw': 'Click on the map to add vertices',
+    'map.modeEdit': 'Editing existing field — click to add points, use Undo to remove',
+    'map.validationName': 'Field name is required',
+    'map.validationPolygon': 'At least 3 points are required to form a field',
+    'map.validationMeta': 'Crop, irrigation and soil are required',
+    'map.helpDraw': 'Select "Draw Field" to begin',
+    'map.fieldSaved': 'Field saved',
+    'map.fieldUpdated': 'Field updated',
+    'map.fieldDeleted': 'Field removed',
+    'map.noFields': 'No fields yet — draw one to get started',
+    'map.confirmDelete': 'Remove this field? It will be deleted from this session.',
+    'strategy.titleShort': 'Strategies',
+    'review.fieldLabel': 'Field under review',
+  },
+  ar: {
+    'brand': 'سولدوك', 'brandSub': 'المزرعة الافتراضية',
+    'tagline': 'مزرعتك. قراراتك. مستقبلك.',
+    'demoData': 'بيانات تجريبية — ليست أرصادًا حية',
+    'nav.overview': 'نظرة عامة', 'nav.farms': 'مزارعي', 'nav.mapping': 'رسم المزرعة',
+    'nav.intel': 'ذكاء المزرعة', 'nav.goals': 'أهداف المزارع', 'nav.strategy': 'مقارنة الاستراتيجيات',
+    'nav.simulator': 'محاكي ماذا لو', 'nav.economics': 'المخطط الاقتصادي', 'nav.review': 'مراجعة المهندس الزراعي',
+    'nav.reports': 'تقارير القرار', 'nav.settings': 'الإعدادات', 'nav.help': 'مركز المساعدة', 'nav.profile': 'ملف المستخدم',
+    'action.exploreFarm': 'استكشف مزرعتك', 'action.howItWorks': 'اكتشف كيف يعمل',
+    'action.startExploring': 'ابدأ الاستكشاف', 'action.continue': 'متابعة', 'action.save': 'حفظ',
+    'action.cancel': 'إلغاء', 'action.generate': 'توليد', 'action.download': 'تحميل PDF',
+    'action.print': 'طباعة التقرير', 'action.newFarm': 'إنشاء مزرعة جديدة', 'action.open': 'فتح',
+    'action.edit': 'تحرير', 'action.delete': 'حذف', 'action.saveField': 'حفظ الحقل',
+    'action.reset': 'إعادة تعيين', 'action.equalize': 'توزيع متساوٍ', 'action.savePriorities': 'حفظ الأولويات',
+    'action.requestReview': 'طلب مراجعة المهندس الزراعي', 'action.viewExplanation': 'عرض التفسير',
+    'action.undo': 'تراجع عن النقطة الأخيرة', 'action.clear': 'مسح الرسم', 'action.finish': 'إنهاء الحقل',
+    'action.startDraw': 'رسم حقل', 'action.editField': 'تحرير الحقل',
+    'role.farmer': 'مزارع', 'role.agronomist': 'مهندس زراعي', 'role.admin': 'مدير النظام',
+    'landing.heroTitle': 'افهم أرضك. اتخذ قرارات أذكى.',
+    'landing.heroSub': 'حوّل ذكاء الأقمار الصناعية والبيانات البيئية إلى قرارات زراعية أوضح. استكشف مزرعتك، قارن الاستراتيجيات، واستعد لظروف مناخية متغيرة.',
+    'landing.featuresTitle': 'مصمم للزراعة القائمة على الأدلة',
+    'landing.howTitle': 'كيف يعمل', 'landing.dataTitle': 'البيانات والتقنية',
+    'landing.dataNote': 'لا تدّعي سولدوك أن ناسا تصادق أو توصي بالاستراتيجيات الزراعية. تُستخدم مصادر البيانات للسياق البيئي فقط.',
+    'landing.finalTitle': 'مزرعتك تستحق قرارات مدعومة بالأدلة.',
+    'dash.welcome': 'مرحبًا بعودتك، أيها المزارع.', 'dash.welcomeSub': 'هذه نظرة عامة على ذكاء مزرعتك.',
+    'kpi.area': 'إجمالي مساحة المزرعة', 'kpi.fields': 'الحقول النشطة', 'kpi.dataStatus': 'حالة البيانات البيئية',
+    'kpi.strategy': 'حالة الاستراتيجية الحالية', 'kpi.areaUnit': 'هكتار', 'kpi.fieldsUnit': 'حقل',
+    'kpi.partial': 'تغطية جزئية', 'kpi.ready': 'جاهز', 'kpi.limited': 'محدود',
+    'kpi.noStrategy': 'لا توجد استراتيجية مختارة', 'kpi.candidate': 'استراتيجية مرشحة',
+    'section.farmMap': 'خريطة المزرعة', 'section.envOverview': 'النظرة البيئية',
+    'section.recent': 'النشاط الأخير', 'section.insights': 'الرؤى والتنبيهات',
+    'intel.title': 'ذكاء المزرعة',
+    'intel.sub': 'المؤشرات البيئية للحقل المحدد. كل مجموعة بيانات مُوسومة بالمصدر والفترة والدقة والثقة.',
+    'intel.temperature': 'درجة الحرارة', 'intel.rainfall': 'الأمطار', 'intel.soil': 'رطوبة التربة', 'intel.ndvi': 'صحة الغطاء النباتي (NDVI)',
+    'intel.avg': 'المتوسط', 'intel.min': 'الأدنى', 'intel.max': 'الأعلى', 'intel.total': 'الإجمالي',
+    'intel.details': 'التفاصيل', 'intel.source': 'مصدر البيانات', 'intel.period': 'فترة الرصد',
+    'intel.resolution': 'الدقة المكانية', 'intel.temporal': 'الدقة الزمنية', 'intel.confidence': 'الثقة',
+    'intel.type': 'نوع القيمة', 'intel.observed': 'مرصودة (تجريبية)', 'intel.calculated': 'محسوبة',
+    'intel.limitations': 'قيود البيانات',
+    'intel.ndviWarn': 'لا يجوز اعتبار NDVI وحده تشخيصًا قاطعًا لمرض المحصول أو الآفات أو نقص العناصر. إنه يعكس حيوية الغطاء النباتي وليس السبب.',
+    'intel.soilWarn': 'قد تكون دقة منتجات رطوبة التربة بالأقمار الصناعية خشنة جدًا لتمثيل الحقول الزراعية الصغيرة بدقة.',
+    'intel.noFieldTitle': 'لا يوجد حقل محدد',
+    'intel.noFieldBody': 'اختر حقلًا من الشريط العلوي، أو ارسم حقلًا جديدًا في صفحة رسم المزرعة للبدء.',
+    'goals.title': 'ما الأهم بالنسبة لك هذا الموسم؟',
+    'goals.sub': 'كل مزرعة لها أولويات مختلفة. خصص أهدافك لتوليد استراتيجيات زراعية متوافقة مع احتياجاتك.',
+    'goals.total': 'إجمالي الوزن', 'goals.constraints': 'قيود الزراعة',
+    'goals.constraintsSub': 'يجب أن تستوفي أي استراتيجية قابلة للتطبيق القيود الصارمة. تؤثر التفضيلات المرنة على الترتيب فقط.',
+    'goals.hard': 'قيد صارم', 'goals.soft': 'تفضيل مرن',
+    'goals.summary': 'ملخص الأهداف', 'goals.mustEqual100': 'يجب أن يكون مجموع الأوزان 100% قبل الحفظ.',
+    'strategy.title': 'قارن استراتيجياتك الزراعية',
+    'strategy.sub': 'استكشف أساليب مختلفة وافهم المقايضات البيئية والعملية.',
+    'strategy.why': 'لماذا هذه الاستراتيجية؟', 'strategy.scoring': 'التقييم القابل للتفسير', 'strategy.confidence': 'الثقة',
+    'strategy.suitability': 'الملاءمة', 'strategy.sensitivity': 'تحليل الحساسية',
+    'strategy.criterion': 'المعيار', 'strategy.raw': 'الخام', 'strategy.normalized': 'المُطبع',
+    'strategy.weight': 'الوزن', 'strategy.contribution': 'المساهمة', 'strategy.final': 'النتيجة النهائية',
+    'strategy.infeasible': 'غير موصى بها', 'strategy.violates': 'تنتهك',
+    'strategy.missingData': 'بيانات ناقصة', 'strategy.topFeasible': 'الأعلى ترتيبًا',
+    'strategy.noFeasible': 'لا توجد استراتيجية قابلة للتطبيق حاليًا — أزل انتهاكات القيود الصارمة أدناه قبل الترتيب.',
+    'strategy.fieldContext': 'يُقيَّم لحقل', 'strategy.notRanked': 'غير مصنفة (غير قابلة للتطبيق)',
+    'strategy.evaluatingFor': 'سياق الحقل',
+    'sim.title': 'ماذا لو تغيرت الظروف؟',
+    'sim.sub': 'استكشف كيف قد تؤثر الظروف البيئية والاقتصادية المختلفة على استراتيجيتك الزراعية.',
+    'sim.baseline': 'السيناريو الأساسي', 'sim.modified': 'السيناريو المعدل', 'sim.difference': 'الفرق',
+    'sim.note': 'هذا محاكي توضيحي لدعم القرار. المخرجات ليست تنبؤات محصول معتمدة ولا نتائج مالية مضمونة. تغيرات الدرجات استكشافية.',
+    'sim.whyChanged': 'لماذا تغيرت النتائج', 'sim.scoreChange': 'تغير الدرجة', 'sim.rankChange': 'الترتيب',
+    'sim.noChanges': 'لا توجد تغييرات بعد — حرك أي شريط لترى استجابة درجات الاستراتيجيات.',
+    'reports.title': 'تقارير القرار',
+    'reports.sub': 'تقرير شامل قابل للطباعة للحقل والأهداف والقيود ونتائج الاستراتيجيات المحددة.',
+    'reports.sections': 'أقسام التقرير', 'reports.generated': 'تم الإنشاء', 'reports.farm': 'المزرعة',
+    'review.title': 'مراجعة المهندس الزراعي',
+    'review.sub': 'مطلوب مراجعة خبير قبل تطبيق توصيات زراعية غير معتمدة.',
+    'settings.title': 'الإعدادات', 'settings.sub': 'إعدادات الحساب والتفضيلات والعرض والبيانات لهذا العرض التجريبي.',
+    'lang.en': 'English', 'lang.ar': 'العربية',
+    'common.hectares': 'هـ', 'common.acres': 'فدان', 'common.fields': 'حقول',
+    'common.low': 'منخفض', 'common.medium': 'متوسط', 'common.high': 'مرتفع',
+    'common.yes': 'نعم', 'common.no': 'لا', 'common.none': 'لا شيء', 'common.all': 'الكل',
+    'common.updated': 'آخر تحديث', 'common.location': 'الموقع', 'common.crop': 'المحصول',
+    'common.season': 'الموسم', 'common.soil': 'التربة', 'common.irrigation': 'الري',
+    'common.area': 'المساحة', 'common.notes': 'ملاحظات', 'common.close': 'إغلاق',
+    'common.required': 'مطلوب', 'common.field': 'الحقل', 'common.noField': 'لا يوجد حقل',
+    'common.planting': 'تاريخ الزراعة', 'common.farm': 'المزرعة',
+    'map.modeIdle': 'وضع العرض — انقر على حقل على الخريطة لاختياره',
+    'map.modeDraw': 'انقر على الخريطة لإضافة رؤوس',
+    'map.modeEdit': 'تحرير حقل موجود — انقر لإضافة نقاط، استخدم التراجع للحذف',
+    'map.validationName': 'اسم الحقل مطلوب',
+    'map.validationPolygon': 'مطلوب 3 نقاط على الأقل لتشكيل الحقل',
+    'map.validationMeta': 'المحصول والري والتربة مطلوبة',
+    'map.helpDraw': 'اختر "رسم حقل" للبدء',
+    'map.fieldSaved': 'تم حفظ الحقل',
+    'map.fieldUpdated': 'تم تحديث الحقل',
+    'map.fieldDeleted': 'تم حذف الحقل',
+    'map.noFields': 'لا توجد حقول بعد — ارسم واحدًا للبدء',
+    'map.confirmDelete': 'هل تريد حذف هذا الحقل؟ سيُحذف من هذه الجلسة.',
+    'strategy.titleShort': 'الاستراتيجيات',
+    'review.fieldLabel': 'الحقل قيد المراجعة',
+  }
+};
+
+const LangCtx = createContext({ lang: 'en', dir: 'ltr', t: k => k });
+const useT = () => useContext(LangCtx);
+function LangProvider({ lang, children }) {
+  const value = useMemo(() => ({
+    lang,
+    dir: lang === 'ar' ? 'rtl' : 'ltr',
+    t: k => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k,
+  }), [lang]);
+  return <LangCtx.Provider value={value}>{children}</LangCtx.Provider>;
+}
+
+/* ============================================================
+   GEO UTILITIES
+============================================================ */
+function polygonAreaM2(coords) {
+  if (!coords || coords.length < 3) return 0;
+  const R = 6378137; let area = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const [lat1, lng1] = coords[i];
+    const [lat2, lng2] = coords[(i + 1) % coords.length];
+    area += (lng2 - lng1) * Math.PI / 180 * (2 + Math.sin(lat1 * Math.PI / 180) + Math.sin(lat2 * Math.PI / 180));
+  }
+  return Math.abs(area * R * R / 2);
+}
+const computeHa = coords => +(polygonAreaM2(coords) / 10000).toFixed(2);
+
+/* ============================================================
+   INITIAL DATA
+============================================================ */
+const FARMS_SEED = [
+  { id: 'farm-qalyubia', name: 'Nile Delta Farm', nameAr: 'مزرعة دلتا النيل',
+    location: 'Qalyubia, Egypt', locationAr: 'القليوبية، مصر',
+    lat: 30.412, lng: 31.207, updated: '2025-06-12', status: 'partial' },
+  { id: 'farm-sharqia', name: 'East Delta Farm', nameAr: 'مزرعة شرق الدلتا',
+    location: 'Sharqia, Egypt', locationAr: 'الشرقية، مصر',
+    lat: 30.72, lng: 31.80, updated: '2025-06-08', status: 'ready' },
+  { id: 'farm-beheira', name: 'Beheira Farm', nameAr: 'مزرعة البحيرة',
+    location: 'Beheira, Egypt', locationAr: 'البحيرة، مصر',
+    lat: 30.90, lng: 30.50, updated: '2025-05-30', status: 'limited' },
+];
+
+const FIELDS_SEED = (() => {
+  const a = [[30.4120, 31.2040],[30.4144, 31.2040],[30.4144, 31.2068],[30.4120, 31.2068]];
+  const b = [[30.4150, 31.2074],[30.4168, 31.2074],[30.4168, 31.2098],[30.4150, 31.2098]];
+  const c = [[30.4084, 31.2076],[30.4110, 31.2076],[30.4110, 31.2100],[30.4084, 31.2100]];
+  const d = [[30.7220, 31.8020],[30.7242, 31.8020],[30.7242, 31.8042],[30.7220, 31.8042]];
+  return [
+    { id: 'fld-a', farmId: 'farm-qalyubia', name: 'Field A', nameAr: 'حقل أ', color: '#477A5C',
+      coords: a, crop: 'Wheat', cropAr: 'قمح', season: 'Winter 2025/26', seasonAr: 'شتاء 2025/26',
+      irrigation: 'Furrow', irrigationAr: 'أخاديد', soil: 'Clay loam', soilAr: 'طينية طميية',
+      plantingDate: '2025-11-15', notes: '', areaHa: computeHa(a), updatedAt: '2025-06-12' },
+    { id: 'fld-b', farmId: 'farm-qalyubia', name: 'Field B', nameAr: 'حقل ب', color: '#4A86B8',
+      coords: b, crop: 'Clover', cropAr: 'برسيم', season: 'Winter 2025/26', seasonAr: 'شتاء 2025/26',
+      irrigation: 'Drip', irrigationAr: 'تنقيط', soil: 'Sandy loam', soilAr: 'رملية طميية',
+      plantingDate: '2025-10-20', notes: '', areaHa: computeHa(b), updatedAt: '2025-06-10' },
+    { id: 'fld-c', farmId: 'farm-qalyubia', name: 'Field C', nameAr: 'حقل ج', color: '#E6A23C',
+      coords: c, crop: 'Maize', cropAr: 'ذرة', season: 'Summer 2025', seasonAr: 'صيف 2025',
+      irrigation: 'Sprinkler', irrigationAr: 'رش', soil: 'Silty clay', soilAr: 'طينية غرينية',
+      plantingDate: '2025-05-10', notes: '', areaHa: computeHa(c), updatedAt: '2025-06-08' },
+    { id: 'fld-d', farmId: 'farm-sharqia', name: 'East Block', nameAr: 'الكتلة الشرقية', color: '#477A5C',
+      coords: d, crop: 'Maize', cropAr: 'ذرة', season: 'Summer 2025', seasonAr: 'صيف 2025',
+      irrigation: 'Furrow', irrigationAr: 'أخاديد', soil: 'Clay loam', soilAr: 'طينية طميية',
+      plantingDate: '2025-05-15', notes: '', areaHa: computeHa(d), updatedAt: '2025-06-08' },
+  ];
+})();
+
+const CROP_OPTIONS = [
+  { en: 'Wheat', ar: 'قمح' }, { en: 'Maize', ar: 'ذرة' }, { en: 'Clover', ar: 'برسيم' },
+  { en: 'Cotton', ar: 'قطن' }, { en: 'Rice', ar: 'أرز' }, { en: 'Fava beans', ar: 'فول' },
+];
+const IRRIGATION_OPTIONS = [
+  { en: 'Furrow', ar: 'أخاديد' }, { en: 'Drip', ar: 'تنقيط' },
+  { en: 'Sprinkler', ar: 'رش' }, { en: 'Surface', ar: 'سطحي' },
+];
+const SOIL_OPTIONS = [
+  { en: 'Clay loam', ar: 'طينية طميية' }, { en: 'Sandy loam', ar: 'رملية طميية' },
+  { en: 'Silty clay', ar: 'طينية غرينية' }, { en: 'Sandy', ar: 'رملية' },
+];
+const SEASON_OPTIONS = [
+  { en: 'Winter 2025/26', ar: 'شتاء 2025/26' },
+  { en: 'Summer 2025', ar: 'صيف 2025' },
+  { en: 'Nile 2025', ar: 'نيلي 2025' },
+];
+
+/* Base environmental climatology — deterministic per-field offsets applied in envForField */
+const BASE_ENV = {
+  temperature: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    avg: [13.4,14.6,17.5,21.6,25.4,28.3,29.4,29.2,27.4,23.6,18.9,14.7],
+    min: [8.1,9.0,11.3,14.8,18.4,21.3,23.1,23.0,21.2,17.9,13.4,9.2],
+    max: [19.2,20.5,24.0,28.6,32.5,35.4,36.2,36.0,33.9,29.5,24.6,19.9],
+    unit: '°C', headline: 21.4,
+    meta: { source: 'NASA POWER (DEMO)', period: '2024 monthly climatology (demo)',
+      resolution: '0.5° × 0.625°', temporal: 'Monthly', confidence: 'medium', type: 'observed' }
+  },
+  rainfall: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    values: [6.2,4.8,3.4,1.2,0.4,0.0,0.0,0.0,0.2,1.6,4.1,5.8],
+    unit: 'mm', headline: 27.7,
+    meta: { source: 'GPM IMERG (DEMO)', period: '2024 monthly total (demo)',
+      resolution: '0.1°', temporal: 'Monthly', confidence: 'medium', type: 'observed' }
+  },
+  soil: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    values: [0.31,0.29,0.26,0.22,0.18,0.15,0.14,0.14,0.17,0.22,0.27,0.30],
+    unit: 'm³/m³', headline: 0.22,
+    meta: { source: 'SMAP L4 (DEMO)', period: '2024 monthly mean (demo)',
+      resolution: '~9 km', temporal: '3-hourly → monthly', confidence: 'low', type: 'observed' }
+  },
+  ndvi: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    values: [0.42,0.48,0.58,0.66,0.71,0.68,0.61,0.55,0.52,0.55,0.51,0.45],
+    unit: 'index', headline: 0.55,
+    meta: { source: 'MODIS MOD13Q1 (DEMO)', period: '2024 16-day composites (demo)',
+      resolution: '250 m', temporal: '16-day', confidence: 'medium', type: 'calculated' }
+  }
+};
+
+const ACTIVITIES = [
+  { id: 1, icon: 'polygon', en: 'Farm boundary updated', ar: 'تم تحديث حدود الحقل', time: '2h ago', timeAr: 'قبل ساعتين' },
+  { id: 2, icon: 'satellite', en: 'Environmental data refreshed (demo)', ar: 'تم تحديث البيانات البيئية (تجريبي)', time: '5h ago', timeAr: 'قبل 5 ساعات' },
+  { id: 3, icon: 'compare', en: 'New strategy comparison generated', ar: 'تم توليد مقارنة استراتيجيات جديدة', time: 'Yesterday', timeAr: 'أمس' },
+  { id: 4, icon: 'file', en: 'Decision report created', ar: 'تم إنشاء تقرير قرار', time: '2 days ago', timeAr: 'قبل يومين' },
+];
+
+const ALERTS = [
+  { id: 1, level: 'warn', icon: 'alert', en: 'Soil moisture spatial resolution (~9 km) is too coarse for field-level conclusions.', ar: 'الدقة المكانية لرطوبة التربة (~9 كم) خشنة جدًا لاستنتاجات على مستوى الحقل.', enT: 'Data limitation', arT: 'قيد بيانات' },
+  { id: 2, level: 'info', icon: 'info', en: 'Additional soil testing is required — no verified pH, NPK or salinity data is available for this farm.', ar: 'مطلوب فحص تربة إضافي — لا تتوفر بيانات pH أو NPK أو ملوحة موثقة لهذه المزرعة.', enT: 'Missing information', arT: 'معلومات ناقصة' },
+  { id: 3, level: 'warn', icon: 'clock', en: '2 of 3 environmental datasets are past their demo freshness window.', ar: 'مجموعتا بيانات بيئيتان من أصل 3 خارج نافذة الحداثة التجريبية.', enT: 'Data confidence', arT: 'ثقة البيانات' },
+];
+
+/* ============================================================
+   STRATEGY DEFINITIONS (requirements separate from scores)
+============================================================ */
+const STRATEGIES = [
+  {
+    id: 'A',
+    name: 'Current Practice', nameAr: 'الممارسة الحالية',
+    color: '#6B776F',
+    desc: 'Your existing approach used as the baseline for comparison.',
+    descAr: 'نهجك الحالي المستخدم كأساس للمقارنة.',
+    baseScores: {
+      waterEfficiency: 5, climateSuitability: 5, soilSuitability: 6, rotationQuality: 4,
+      environmentalSafety: 5, costEfficiency: 7, potentialReturn: 6, climateResilience: 4
+    },
+    requires: { waterLevel: 7, budgetLevel: 4, equipmentLevel: 3, needsDrip: false },
+    confidence: 0.74,
+  },
+  {
+    id: 'B',
+    name: 'Water Resilience', nameAr: 'مرونة المياه',
+    color: '#4A86B8',
+    desc: 'Improves water efficiency and reduces water-related risk.',
+    descAr: 'يحسّن كفاءة المياه ويقلل المخاطر المرتبطة بالمياه.',
+    baseScores: {
+      waterEfficiency: 9, climateSuitability: 7, soilSuitability: 6, rotationQuality: 6,
+      environmentalSafety: 7, costEfficiency: 5, potentialReturn: 6, climateResilience: 8
+    },
+    requires: { waterLevel: 3, budgetLevel: 7, equipmentLevel: 6, needsDrip: true },
+    confidence: 0.62,
+  },
+  {
+    id: 'C',
+    name: 'Soil & Climate Resilience', nameAr: 'مرونة التربة والمناخ',
+    color: '#477A5C',
+    desc: 'Long-term soil health, adaptation and resilience.',
+    descAr: 'صحة التربة طويلة الأمد والتكيف والمرونة.',
+    baseScores: {
+      waterEfficiency: 7, climateSuitability: 9, soilSuitability: 9, rotationQuality: 9,
+      environmentalSafety: 9, costEfficiency: 4, potentialReturn: 7, climateResilience: 9
+    },
+    requires: { waterLevel: 5, budgetLevel: 8, equipmentLevel: 5, needsDrip: false },
+    confidence: 0.58,
+  },
+];
+
+const CRITERIA = [
+  { key: 'waterEfficiency',      label: 'Water Efficiency',      labelAr: 'كفاءة المياه',       goal: 'water' },
+  { key: 'climateSuitability',   label: 'Climate Suitability',   labelAr: 'الملاءمة المناخية',  goal: 'resilience' },
+  { key: 'soilSuitability',      label: 'Soil Suitability',      labelAr: 'ملاءمة التربة',      goal: 'soil' },
+  { key: 'rotationQuality',      label: 'Crop Rotation',         labelAr: 'الدورة الزراعية',    goal: 'soil' },
+  { key: 'environmentalSafety',  label: 'Environmental Safety',  labelAr: 'السلامة البيئية',    goal: 'inputs' },
+  { key: 'costEfficiency',       label: 'Cost Efficiency',       labelAr: 'كفاءة التكلفة',      goal: 'profit' },
+  { key: 'potentialReturn',      label: 'Potential Return',      labelAr: 'العائد المحتمل',     goal: 'yield' },
+  { key: 'climateResilience',    label: 'Climate Resilience',    labelAr: 'المرونة المناخية',   goal: 'resilience' },
+];
+
+const GOAL_DEFS = [
+  { key: 'yield',      icon: 'trending', label: 'Maximize Crop Yield',      labelAr: 'تعظيم إنتاجية المحصول',       desc: 'Prioritise output per hectare.',            descAr: 'إعطاء الأولوية للإنتاج لكل هكتار.' },
+  { key: 'water',      icon: 'droplet',  label: 'Improve Water Efficiency', labelAr: 'تحسين كفاءة المياه',           desc: 'Produce more with less water.',             descAr: 'إنتاج المزيد بمياه أقل.' },
+  { key: 'soil',       icon: 'sprout',   label: 'Protect Soil Health',      labelAr: 'حماية صحة التربة',             desc: 'Maintain long-term soil fertility.',        descAr: 'الحفاظ على خصوبة التربة طويلة الأمد.' },
+  { key: 'profit',     icon: 'coins',    label: 'Improve Profitability',    labelAr: 'تحسين الربحية',                desc: 'Improve net return per hectare.',           descAr: 'تحسين صافي العائد لكل هكتار.' },
+  { key: 'resilience', icon: 'shield',   label: 'Increase Climate Resilience', labelAr: 'زيادة المرونة المناخية',      desc: 'Withstand heat, drought and variability.',  descAr: 'تحمل الحرارة والجفاف والتقلبات.' },
+  { key: 'inputs',     icon: 'leaf',     label: 'Reduce Input Dependency',  labelAr: 'تقليل الاعتماد على المدخلات',   desc: 'Reduce reliance on purchased inputs.',      descAr: 'تقليل الاعتماد على المدخلات المشتراة.' },
+];
+
+const CONSTRAINTS_DEF = [
+  { key: 'water',      hard: true,  label: 'Limited water availability',  labelAr: 'محدودية توفر المياه',
+    desc: 'Strategies requiring high water input cannot be feasible.', descAr: 'الاستراتيجيات التي تتطلب مياهًا كثيرة لا يمكن أن تكون قابلة للتطبيق.',
+    threshold: { field: 'waterLevel', max: 5 } },
+  { key: 'budget',     hard: true,  label: 'Limited budget',             labelAr: 'ميزانية محدودة',
+    desc: 'Strategies needing high capital investment are infeasible.', descAr: 'الاستراتيجيات التي تحتاج رأس مال كبير غير قابلة للتطبيق.',
+    threshold: { field: 'budgetLevel', max: 5 } },
+  { key: 'crop',       hard: false, label: 'Specific crop requirements',  labelAr: 'متطلبات محصول محددة',
+    desc: 'Rotation commitments favour strategies with strong rotation quality.',
+    descAr: 'التزامات الدورة تفضل الاستراتيجيات ذات جودة دورة عالية.',
+    threshold: { field: 'rotationQuality', min: 6 } },
+  { key: 'irrigation', hard: false, label: 'Irrigation restrictions',      labelAr: 'قيود الري',
+    desc: 'Drip is not feasible — warns if a strategy requires drip.',
+    descAr: 'الري بالتنقيط غير ممكن — تحذير إذا كانت الاستراتيجية تتطلب التنقيط.',
+    threshold: { field: 'needsDrip', max: false } },
+  { key: 'equipment',  hard: false, label: 'Equipment limitations',        labelAr: 'قيود المعدات',
+    desc: 'Limited machinery access warns on high-equipment strategies.',
+    descAr: 'الوصول المحدود للآلات يحذر من الاستراتيجيات ذات المتطلبات العالية.',
+    threshold: { field: 'equipmentLevel', max: 5 } },
+];
+
+/* ============================================================
+   SCORING ENGINE (pure functions)
+============================================================ */
+function hashCode(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = ((h << 5) - h) + str.charCodeAt(i); h |= 0; }
+  return Math.abs(h);
+}
+
+function envForField(field) {
+  if (!field) return BASE_ENV;
+  const seed = hashCode(field.id);
+  const offset = (seed % 100) / 100;
+  const tempDelta = +((offset - 0.5) * 3).toFixed(2);
+  const rainFactor = 0.7 + offset * 0.6;
+  const soilDelta = (offset - 0.5) * 0.06;
+  const ndviDelta = (offset - 0.5) * 0.10;
+  const fieldMeta = { fieldContext: field.name };
+
+  const tempSeries = arr => arr.map(v => +(v + tempDelta).toFixed(1));
+  return {
+    temperature: {
+      ...BASE_ENV.temperature,
+      avg: tempSeries(BASE_ENV.temperature.avg),
+      min: tempSeries(BASE_ENV.temperature.min),
+      max: tempSeries(BASE_ENV.temperature.max),
+      headline: +(BASE_ENV.temperature.headline + tempDelta).toFixed(1),
+      meta: { ...BASE_ENV.temperature.meta, ...fieldMeta },
+    },
+    rainfall: {
+      ...BASE_ENV.rainfall,
+      values: BASE_ENV.rainfall.values.map(v => +(v * rainFactor).toFixed(1)),
+      headline: +(BASE_ENV.rainfall.headline * rainFactor).toFixed(1),
+      meta: { ...BASE_ENV.rainfall.meta, ...fieldMeta },
+    },
+    soil: {
+      ...BASE_ENV.soil,
+      values: BASE_ENV.soil.values.map(v => +(v + soilDelta).toFixed(3)),
+      headline: +(BASE_ENV.soil.headline + soilDelta).toFixed(3),
+      meta: { ...BASE_ENV.soil.meta, ...fieldMeta },
+    },
+    ndvi: {
+      ...BASE_ENV.ndvi,
+      values: BASE_ENV.ndvi.values.map(v => +Math.max(0, Math.min(1, v + ndviDelta)).toFixed(2)),
+      headline: +Math.max(0, Math.min(1, BASE_ENV.ndvi.headline + ndviDelta)).toFixed(2),
+      meta: { ...BASE_ENV.ndvi.meta, ...fieldMeta },
+    },
+  };
+}
+
+function computeWeights(goals) {
+  const total = Object.values(goals).reduce((a, b) => a + b, 0) || 1;
+  const g = {}; Object.keys(goals).forEach(k => { g[k] = goals[k] / total; });
+  const raw = {};
+  CRITERIA.forEach(c => { raw[c.key] = g[c.goal] || 0; });
+  const sum = Object.values(raw).reduce((a, b) => a + b, 0) || 1;
+  Object.keys(raw).forEach(k => { raw[k] = raw[k] / sum; });
+  return raw;
+}
+
+// Evaluate active hard/soft constraints against strategy.requires
+function evaluateConstraints(strategy, activeConstraints) {
+  const violations = [];
+  const warnings = [];
+  CONSTRAINTS_DEF.forEach(cd => {
+    if (!activeConstraints[cd.key]) return;
+    const th = cd.threshold;
+    const value = strategy.requires[th.field];
+    let fails = false;
+    if (th.max !== undefined && typeof value === 'number' && value > th.max) fails = true;
+    if (th.max !== undefined && typeof value === 'boolean' && th.max === false && value === true) fails = true;
+    if (th.min !== undefined && typeof value === 'number' && value < th.min) fails = true;
+    if (fails) {
+      const reason = `${value} vs ${th.max !== undefined ? '≤' + th.max : '≥' + th.min}`;
+      const entry = { key: cd.key, label: cd.label, labelAr: cd.labelAr, reason, hard: cd.hard };
+      if (cd.hard) violations.push(entry); else warnings.push(entry);
+    }
+  });
+  return { violations, warnings, feasible: violations.length === 0 };
+}
+
+// Compute criterion scores for a strategy adjusted by field context + simulation
+function computeStrategyScores(strategy, field, sim) {
+  const s = { ...strategy.baseScores };
+  const clamp = (v, lo = 1, hi = 10) => +Math.max(lo, Math.min(hi, v)).toFixed(2);
+
+  if (field) {
+    if (field.irrigation === 'Drip')    s.waterEfficiency = clamp(s.waterEfficiency + 0.8);
+    if (field.irrigation === 'Furrow')  s.waterEfficiency = clamp(s.waterEfficiency - 0.6);
+    if (field.soil === 'Sandy' || field.soil === 'Sandy loam') s.soilSuitability = clamp(s.soilSuitability - 1);
+    if (field.soil === 'Clay loam' && strategy.id === 'C') s.soilSuitability = clamp(s.soilSuitability + 0.8);
+    if (field.season && field.season.includes('Summer') && strategy.id === 'A') s.climateSuitability = clamp(s.climateSuitability - 0.8);
+  }
+
+  if (sim) {
+    // Temperature stress: hotter → low-resilience strategies suffer, resilient ones gain
+    if (sim.temp !== 0) {
+      const t = sim.temp / 4;
+      if (strategy.id === 'A') s.climateResilience = clamp(s.climateResilience - t * 1.5);
+      if (strategy.id === 'B') s.climateResilience = clamp(s.climateResilience - t * 0.4);
+      if (strategy.id === 'C') s.climateResilience = clamp(s.climateResilience + t * 0.3);
+    }
+    // Water stress: less water → high-requirement strategies suffer on water efficiency
+    if (sim.water !== 0) {
+      const w = sim.water / 20; // -2 .. +1.5
+      const stress = -w;
+      const impact = -stress * (strategy.requires.waterLevel / 10) * 2.5;
+      s.waterEfficiency = clamp(s.waterEfficiency + impact);
+      if (strategy.id === 'B') s.potentialReturn = clamp(s.potentialReturn + stress * 0.3);
+    }
+    // Input price: cost efficiency suffers, more for high-input strategies
+    if (sim.inputPrice !== 0) {
+      const p = sim.inputPrice / 20; // -1 .. +2
+      const impact = -p * (strategy.id === 'A' ? 0.7 : strategy.id === 'C' ? 0.9 : 0.6);
+      s.costEfficiency = clamp(s.costEfficiency + impact);
+    }
+    // Market price: potential return responds
+    if (sim.marketPrice !== 0) {
+      const m = sim.marketPrice / 20;
+      s.potentialReturn = clamp(s.potentialReturn + m * 1.2);
+    }
+    // Rainfall: extra rain helps soil moisture users, hurts water-resilient advantage
+    if (sim.rain !== 0) {
+      const r = sim.rain / 40; // -1.25 .. +1.5
+      if (strategy.id === 'A') s.waterEfficiency = clamp(s.waterEfficiency + r * 0.6);
+      if (strategy.id === 'B') s.waterEfficiency = clamp(s.waterEfficiency - r * 0.3);
+      s.climateResilience = clamp(s.climateResilience + r * 0.2);
+    }
+  }
+
+  return s;
+}
+
+function evaluateStrategies(field, weights, constraints, sim) {
+  const results = STRATEGIES.map(strategy => {
+    const { violations, warnings, feasible } = evaluateConstraints(strategy, constraints);
+    const scores = computeStrategyScores(strategy, field, sim);
+
+    const breakdown = CRITERIA.map(c => {
+      const raw = scores[c.key] || 0;
+      const norm = raw / 10;
+      const weight = weights[c.key] || 0;
+      const contribution = norm * weight * 10;
+      return { ...c, raw, norm, weight, contribution };
+    }).sort((a, b) => b.contribution - a.contribution);
+
+    const total = +breakdown.reduce((sum, b) => sum + b.contribution, 0).toFixed(2);
+
+    const missing = [];
+    if (!field) { missing.push('field not selected'); }
+    else {
+      if (!field.soil) missing.push('soil type');
+      if (!field.irrigation) missing.push('irrigation method');
+      if (!field.crop) missing.push('crop type');
+    }
+
+    let confidence = strategy.confidence;
+    if (missing.length > 0) confidence = Math.max(0.3, +(confidence - 0.08 * missing.length).toFixed(2));
+
+    return { ...strategy, scores, breakdown, total, feasible, violations, warnings, missing, confidence, finalScore: feasible ? total : null };
+  });
+
+  return results.sort((a, b) => {
+    if (a.feasible && !b.feasible) return -1;
+    if (!a.feasible && b.feasible) return 1;
+    return b.total - a.total;
+  });
+}
+
+/* ============================================================
+   UI PRIMITIVES
+============================================================ */
+function DataBadge({ small }) {
+  const { t } = useT();
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border border-warn/40 bg-warn/10 text-warn font-semibold ${small ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]'} tracking-wide uppercase`}>
+      <Icon name="info" size={small ? 10 : 11} /> {t('demoData')}
+    </span>
+  );
+}
+
+function Card({ className = '', children, ...rest }) {
+  return <div className={`bg-white border border-line rounded-2xl shadow-card ${className}`} {...rest}>{children}</div>;
+}
+
+function Button({ variant = 'primary', size = 'md', icon, children, className = '', ...rest }) {
+  const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40 disabled:opacity-50 disabled:cursor-not-allowed';
+  const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2.5 text-sm', lg: 'px-5 py-3 text-sm' };
+  const variants = {
+    primary: 'bg-forest text-white hover:bg-deep',
+    secondary: 'bg-lightsage text-forest hover:bg-sage/40 border border-line',
+    ghost: 'text-ink hover:bg-lightsage/70',
+    outline: 'border border-line text-ink hover:bg-lightsage/50 bg-white',
+    danger: 'bg-danger text-white hover:bg-danger/90',
+    warn: 'bg-warn text-white hover:bg-warn/90',
+  };
+  return (
+    <button className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...rest}>
+      {icon && <Icon name={icon} size={size === 'sm' ? 14 : 16} />}
+      {children}
+    </button>
+  );
+}
+
+function Badge({ tone = 'neutral', children, icon }) {
+  const tones = {
+    neutral: 'bg-lightsage text-forest border-line',
+    success: 'bg-secondary/10 text-secondary border-secondary/20',
+    warn: 'bg-warn/10 text-warn border-warn/30',
+    danger: 'bg-danger/10 text-danger border-danger/30',
+    info: 'bg-info/10 text-info border-info/20',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-semibold ${tones[tone]}`}>
+      {icon && <Icon name={icon} size={11} />} {children}
+    </span>
+  );
+}
+
+function InfoTip({ text }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} onClick={() => setOpen(v => !v)}
+        className="text-muted hover:text-forest transition-colors" aria-label="info">
+        <Icon name="info" size={13} />
+      </button>
+      {open && (
+        <span className="absolute z-30 top-6 start-0 w-64 p-2.5 text-[11px] leading-relaxed bg-forest text-white rounded-lg shadow-lift">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function FieldContextBar({ field, farm, compact }) {
+  const { t, lang } = useT();
+  if (!field) return null;
+  const crop = lang === 'ar' ? field.cropAr : field.crop;
+  const season = lang === 'ar' ? field.seasonAr : field.season;
+  const irrigation = lang === 'ar' ? field.irrigationAr : field.irrigation;
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${compact ? 'text-[11px]' : 'text-xs'} text-muted`}>
+      <span className="inline-flex items-center gap-1 font-semibold text-forest">
+        <span className="w-2 h-2 rounded-sm" style={{ background: field.color }} />
+        {lang === 'ar' ? field.nameAr : field.name}
+      </span>
+      <span>·</span><span>{crop}</span>
+      <span>·</span><span>{season}</span>
+      <span>·</span><span>{irrigation}</span>
+      <span>·</span><span className="font-semibold text-forest">{field.areaHa} {t('common.hectares')}</span>
+      {farm && <><span>·</span><span>{lang === 'ar' ? farm.nameAr : farm.name}</span></>}
+    </div>
+  );
+}
+
+/* ============================================================
+   CHARTS
+============================================================ */
+function ChartFrame({ children, height = 180, className = '' }) {
+  return <div className={`w-full ${className}`} style={{ height }}>{children}</div>;
+}
+
+function LineChart({ labels, series, height = 180 }) {
+  const W = 600, H = height, P = { l: 34, r: 10, t: 12, b: 22 };
+  const all = series.flatMap(s => s.values);
+  if (!all.length) return <ChartFrame height={height}><div className="h-full grid place-items-center text-muted text-xs">No data</div></ChartFrame>;
+  const min = Math.min(...all), max = Math.max(...all);
+  const pad = (max - min) * 0.1 || 1;
+  const lo = min - pad, hi = max + pad;
+  const x = i => P.l + (i / Math.max(1, labels.length - 1)) * (W - P.l - P.r);
+  const y = v => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+  const ticks = 4;
+  return (
+    <ChartFrame height={height}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full">
+        {Array.from({ length: ticks + 1 }).map((_, i) => {
+          const v = lo + (hi - lo) * (i / ticks);
+          return <g key={i}>
+            <line x1={P.l} x2={W - P.r} y1={y(v)} y2={y(v)} stroke="#E1E8DF" strokeWidth="1" />
+            <text x={P.l - 6} y={y(v) + 3} textAnchor="end" fontSize="9" fill="#6B776F">{v.toFixed(1)}</text>
+          </g>;
+        })}
+        {labels.map((l, i) => i % Math.ceil(labels.length / 6) === 0 && (
+          <text key={l + i} x={x(i)} y={H - 6} textAnchor="middle" fontSize="9" fill="#6B776F">{l}</text>
+        ))}
+        {series.map((s, si) => {
+          const pts = s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+          return <g key={si}>
+            {s.fill && <polygon points={`${x(0)},${H - P.b} ${pts} ${x(labels.length - 1)},${H - P.b}`} fill={s.color} opacity="0.10" />}
+            <polyline points={pts} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={s.dash || ''} />
+            {s.values.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="2" fill={s.color} />)}
+          </g>;
+        })}
+      </svg>
+    </ChartFrame>
+  );
+}
+
+function BarChart({ labels, values, color = '#477A5C', height = 180 }) {
+  const W = 600, H = height, P = { l: 34, r: 10, t: 12, b: 22 };
+  const max = Math.max(...values, 1);
+  const gap = (W - P.l - P.r) / values.length;
+  const bw = gap * 0.62;
+  const y = v => P.t + (1 - v / max) * (H - P.t - P.b);
+  return (
+    <ChartFrame height={height}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
+        {[0, 0.25, 0.5, 0.75, 1].map((f, i) => (
+          <line key={i} x1={P.l} x2={W - P.r} y1={y(max * f)} y2={y(max * f)} stroke="#E1E8DF" />
+        ))}
+        {values.map((v, i) => (
+          <g key={i}>
+            <rect x={P.l + i * gap + (gap - bw) / 2} y={y(v)} width={bw} height={H - P.b - y(v)} rx="3" fill={color} opacity={0.85} />
+            <text x={P.l + i * gap + gap / 2} y={H - 6} textAnchor="middle" fontSize="9" fill="#6B776F">{labels[i]}</text>
+          </g>
+        ))}
+      </svg>
+    </ChartFrame>
+  );
+}
+
+function RadarChart({ axes, series, size = 240 }) {
+  const cx = size / 2, cy = size / 2, R = size / 2 - 30;
+  const n = axes.length;
+  const angle = i => (Math.PI * 2 * i) / n - Math.PI / 2;
+  const pt = (i, v) => {
+    const r = (v / 10) * R;
+    return [cx + Math.cos(angle(i)) * r, cy + Math.sin(angle(i)) * r];
+  };
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full">
+      {[2, 4, 6, 8, 10].map(ring => (
+        <polygon key={ring} points={axes.map((_, i) => pt(i, ring).join(',')).join(' ')} fill="none" stroke="#E1E8DF" strokeWidth="1" />
+      ))}
+      {axes.map((a, i) => {
+        const [x, y] = pt(i, 10);
+        return <g key={a.key}>
+          <line x1={cx} y1={cy} x2={x} y2={y} stroke="#E1E8DF" />
+          <text x={pt(i, 12)[0]} y={pt(i, 12)[1]} fontSize="8" fill="#6B776F" textAnchor="middle" dominantBaseline="middle">{a.short}</text>
+        </g>;
+      })}
+      {series.map((s, si) => (
+        <polygon key={si} points={axes.map((a, i) => pt(i, s.values[a.key] || 0).join(',')).join(' ')}
+          fill={s.color} fillOpacity="0.14" stroke={s.color} strokeWidth="2" />
+      ))}
+    </svg>
+  );
+}
+
+/* ============================================================
+   LEAFLET MAP
+============================================================ */
+function LeafletMap({ center = [30.41, 31.21], zoom = 14, polygons = [], onMapClick, onFieldClick, drawing = false, className = '', height = '100%' }) {
+  const divRef = useRef(null);
+  const mapRef = useRef(null);
+  const layersRef = useRef([]);
+  const drawRef = useRef(drawing); const clickRef = useRef(onMapClick); const fieldClickRef = useRef(onFieldClick);
+  useEffect(() => { drawRef.current = drawing; }, [drawing]);
+  useEffect(() => { clickRef.current = onMapClick; }, [onMapClick]);
+  useEffect(() => { fieldClickRef.current = onFieldClick; }, [onFieldClick]);
+
+  useEffect(() => {
+    if (!divRef.current || mapRef.current) return;
+    const m = L.map(divRef.current, { center, zoom, zoomControl: false, attributionControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(m);
+    L.control.zoom({ position: 'bottomright' }).addTo(m);
+    m.on('click', e => { if (drawRef.current && clickRef.current) clickRef.current([e.latlng.lat, e.latlng.lng]); });
+    mapRef.current = m;
+    setTimeout(() => m.invalidateSize(), 50);
+    return () => { m.remove(); mapRef.current = null; };
+  }, []);
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m) return;
+    layersRef.current.forEach(l => m.removeLayer(l)); layersRef.current = [];
+    (polygons || []).forEach(p => {
+      if (!p.coords || p.coords.length < 3) return;
+      const poly = L.polygon(p.coords, {
+        color: p.color || '#477A5C', weight: 2,
+        fillColor: p.color || '#477A5C', fillOpacity: p.draft ? 0.12 : 0.20,
+        dashArray: p.draft ? '5 5' : ''
+      }).addTo(m);
+      if (p.label) poly.bindTooltip(p.label, { permanent: true, direction: 'center', className: 'field-tooltip' });
+      if (!p.draft && fieldClickRef.current && p.id) {
+        poly.on('click', e => {
+          L.DomEvent.stopPropagation(e);
+          if (fieldClickRef.current) fieldClickRef.current(p.id);
+        });
+      }
+      layersRef.current.push(poly);
+    });
+    if (polygons.length && !drawing) {
+      const draft = polygons.find(p => p.draft);
+      const target = draft || polygons[polygons.length - 1];
+      if (target.coords.length >= 2) {
+        try { m.fitBounds(L.latLngBounds(target.coords).pad(0.4)); } catch (e) {}
+      }
+    }
+  }, [polygons, drawing]);
+
+  return <div ref={divRef} className={className} style={{ height }} />;
+}
+
+/* ============================================================
+   SIDEBAR + TOPBAR
+============================================================ */
+const NAV_MAIN = [
+  { id: 'dashboard', icon: 'home', label: 'nav.overview' },
+  { id: 'farms', icon: 'layers', label: 'nav.farms' },
+  { id: 'mapping', icon: 'map', label: 'nav.mapping' },
+  { id: 'intel', icon: 'satellite', label: 'nav.intel' },
+  { id: 'goals', icon: 'target', label: 'nav.goals' },
+  { id: 'strategy', icon: 'compare', label: 'nav.strategy' },
+  { id: 'simulator', icon: 'flask', label: 'nav.simulator' },
+  { id: 'economics', icon: 'coins', label: 'nav.economics' },
+  { id: 'review', icon: 'shield', label: 'nav.review' },
+  { id: 'reports', icon: 'file', label: 'nav.reports' },
+  { id: 'settings', icon: 'settings', label: 'nav.settings' },
+];
+
+function Sidebar({ route, setRoute, role, setRole, open, setOpen }) {
+  const { t, dir } = useT();
+  return (
+    <>
+      {open && <div onClick={() => setOpen(false)} className="fixed inset-0 bg-deep/40 z-30 md:hidden" />}
+      <aside className={`no-print fixed md:sticky top-0 h-screen w-64 shrink-0 bg-forest text-white/90 z-40 transition-transform ${open ? 'translate-x-0' : (dir === 'rtl' ? 'translate-x-full md:translate-x-0' : '-translate-x-full md:translate-x-0')}`}>
+        <div className="flex flex-col h-full">
+          <button onClick={() => { setRoute('landing'); setOpen(false); }} className="flex items-center gap-3 px-5 pt-5 pb-4 text-start">
+            <div className="w-9 h-9 rounded-xl bg-white text-forest grid place-items-center font-extrabold text-sm shrink-0">S</div>
+            <div className="leading-tight">
+              <div className="font-extrabold tracking-wide text-[15px]">{t('brand')}</div>
+              <div className="text-[9px] tracking-[0.2em] text-sage font-semibold">{t('brandSub')}</div>
+            </div>
+          </button>
+          <nav className="flex-1 overflow-y-auto scroll-thin px-2 pb-4">
+            {NAV_MAIN.map(item => {
+              const active = route === item.id;
+              return (
+                <button key={item.id} onClick={() => { setRoute(item.id); setOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 my-0.5 rounded-lg text-[13px] font-medium transition-colors ${active ? 'bg-white text-forest shadow-sm' : 'text-sage hover:text-white hover:bg-white/10'}`}>
+                  <Icon name={item.icon} size={16} className="shrink-0" />
+                  <span className="truncate">{t(item.label)}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="px-3 pb-3 space-y-1.5 border-t border-white/10 pt-3">
+            <div className="px-2 pb-1">
+              <div className="text-[9px] uppercase tracking-wider text-sage/60 font-semibold mb-1.5">Role</div>
+              <select value={role} onChange={e => setRole(e.target.value)}
+                className="w-full bg-white/10 text-white text-xs rounded-lg px-2 py-1.5 border border-white/15 focus:outline-none">
+                <option value="farmer">{t('role.farmer')}</option>
+                <option value="agronomist">{t('role.agronomist')}</option>
+                <option value="admin">{t('role.admin')}</option>
+              </select>
+            </div>
+            <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-sage hover:text-white hover:bg-white/10" onClick={() => setRoute('settings')}>
+              <Icon name="help" size={16} /> {t('nav.help')}
+            </button>
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/10">
+              <div className="w-7 h-7 rounded-full bg-sage text-forest grid place-items-center text-xs font-bold shrink-0">AH</div>
+              <div className="min-w-0">
+                <div className="text-[12px] font-semibold text-white truncate">Ahmed Hassan</div>
+                <div className="text-[10px] text-sage truncate">{t('role.' + role)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function Topbar({ farms, fields, activeFarmId, activeFieldId, setActiveFarmId, setActiveFieldId, lang, setLang, setOpen, title }) {
+  const { t, dir } = useT();
+  const [search, setSearch] = useState('');
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [farmOpen, setFarmOpen] = useState(false);
+  const [fieldOpen, setFieldOpen] = useState(false);
+  const activeFarm = farms.find(f => f.id === activeFarmId) || farms[0];
+  const activeFields = fields.filter(f => f.farmId === activeFarmId);
+  const activeField = activeFields.find(f => f.id === activeFieldId);
+
+  const closeAll = () => { setNotifOpen(false); setLangOpen(false); setFarmOpen(false); setFieldOpen(false); };
+
+  return (
+    <header className="no-print sticky top-0 z-20 bg-canvas/85 backdrop-blur border-b border-line">
+      <div className="flex items-center gap-3 px-4 md:px-6 h-16">
+        <button onClick={() => setOpen(true)} className="md:hidden p-2 -ms-2 text-ink"><Icon name="menu" /></button>
+        <h1 className="text-[15px] md:text-base font-bold text-ink truncate">{title}</h1>
+
+        <div className="hidden lg:flex items-center gap-2 ms-4 flex-1 max-w-md">
+          <div className="relative w-full">
+            <Icon name="search" size={15} className="absolute top-1/2 -translate-y-1/2 start-3 text-muted" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={lang === 'ar' ? 'ابحث…' : 'Search farms, fields, reports…'}
+              className="w-full bg-white border border-line rounded-lg ps-9 pe-3 py-2 text-xs focus:outline-none focus:border-secondary" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 ms-auto">
+          {/* Farm selector */}
+          <div className="relative hidden sm:block">
+            <button onClick={() => { setFarmOpen(v => !v); setNotifOpen(false); setLangOpen(false); setFieldOpen(false); }}
+              className="flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-lightsage border border-transparent hover:border-line max-w-[200px]">
+              <Icon name="layers" size={14} className="text-secondary shrink-0" />
+              <span className="truncate">{lang === 'ar' ? activeFarm.nameAr : activeFarm.name}</span>
+              <Icon name="chevronDown" size={13} className="text-muted shrink-0" />
+            </button>
+            {farmOpen && (
+              <div className={`absolute top-full mt-2 w-64 bg-white border border-line rounded-xl shadow-lift z-50 ${dir === 'rtl' ? 'start-0' : 'end-0'}`}>
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted border-b border-line">{t('nav.farms')}</div>
+                {farms.map(f => (
+                  <button key={f.id} onClick={() => { setActiveFarmId(f.id); setFarmOpen(false); }}
+                    className={`w-full text-start px-3 py-2 text-xs hover:bg-lightsage/60 ${f.id === activeFarmId ? 'bg-lightsage/40 font-semibold' : ''}`}>
+                    {lang === 'ar' ? f.nameAr : f.name}
+                    <div className="text-[10px] text-muted font-normal">{lang === 'ar' ? f.locationAr : f.location}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Field selector */}
+          <div className="relative hidden md:block">
+            <button onClick={() => { setFieldOpen(v => !v); setNotifOpen(false); setLangOpen(false); setFarmOpen(false); }}
+              className="flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-lg hover:bg-lightsage border border-transparent hover:border-line max-w-[180px]">
+              <Icon name="polygon" size={13} className="text-secondary shrink-0" />
+              <span className="truncate">{activeField ? (lang === 'ar' ? activeField.nameAr : activeField.name) : t('common.noField')}</span>
+              <Icon name="chevronDown" size={12} className="text-muted shrink-0" />
+            </button>
+            {fieldOpen && (
+              <div className={`absolute top-full mt-2 w-64 bg-white border border-line rounded-xl shadow-lift z-50 ${dir === 'rtl' ? 'start-0' : 'end-0'}`}>
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted border-b border-line">{t('common.field')}</div>
+                {activeFields.length === 0 && (
+                  <div className="px-3 py-3 text-xs text-muted">{lang === 'ar' ? 'لا توجد حقول' : 'No fields'}</div>
+                )}
+                {activeFields.map(f => (
+                  <button key={f.id} onClick={() => { setActiveFieldId(f.id); setFieldOpen(false); }}
+                    className={`w-full text-start px-3 py-2 text-xs hover:bg-lightsage/60 ${f.id === activeFieldId ? 'bg-lightsage/40 font-semibold' : ''}`}>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: f.color }} />
+                      {lang === 'ar' ? f.nameAr : f.name}
+                    </span>
+                    <div className="text-[10px] text-muted font-normal ms-3.5">
+                      {lang === 'ar' ? f.cropAr : f.crop} · {f.areaHa} ha
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Notifications */}
+          <div className="relative">
+            <button onClick={() => { setNotifOpen(v => !v); closeAll(); setNotifOpen(!notifOpen); }}
+              className="relative p-2 rounded-lg hover:bg-lightsage text-ink">
+              <Icon name="bell" size={18} />
+              <span className="absolute top-1.5 end-1.5 w-1.5 h-1.5 bg-warn rounded-full" />
+            </button>
+            {notifOpen && (
+              <div className={`absolute top-full mt-2 w-80 bg-white border border-line rounded-xl shadow-lift z-50 ${dir === 'rtl' ? 'start-0' : 'end-0'}`}>
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted border-b border-line">{t('section.insights')}</div>
+                {ALERTS.map(a => (
+                  <div key={a.id} className="px-3 py-2.5 border-b border-line last:border-0 flex gap-2.5">
+                    <Icon name={a.icon} size={14} className={a.level === 'warn' ? 'text-warn shrink-0 mt-0.5' : 'text-info shrink-0 mt-0.5'} />
+                    <div className="text-[11px] leading-relaxed text-ink">{lang === 'ar' ? a.ar : a.en}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Language */}
+          <div className="relative">
+            <button onClick={() => { setLangOpen(v => !v); setNotifOpen(false); setFarmOpen(false); setFieldOpen(false); }}
+              className="flex items-center gap-1 p-2 rounded-lg hover:bg-lightsage text-ink text-xs font-semibold">
+              <Icon name="globe" size={16} />
+              <span className="hidden sm:inline">{lang === 'ar' ? 'AR' : 'EN'}</span>
+            </button>
+            {langOpen && (
+              <div className={`absolute top-full mt-2 w-36 bg-white border border-line rounded-xl shadow-lift z-50 ${dir === 'rtl' ? 'start-0' : 'end-0'}`}>
+                {[['en', 'lang.en'], ['ar', 'lang.ar']].map(([code, label]) => (
+                  <button key={code} onClick={() => { setLang(code); setLangOpen(false); }}
+                    className={`w-full text-start px-3 py-2 text-xs hover:bg-lightsage/60 ${lang === code ? 'font-bold bg-lightsage/40' : ''}`}>
+                    {t(label)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="w-8 h-8 rounded-full bg-forest text-white grid place-items-center text-xs font-bold ms-1">AH</div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ============================================================
+   LANDING PAGE
+============================================================ */
+function LandingPage({ setRoute, seedFields }) {
+  const { t, lang } = useT();
+  const features = [
+    { icon: 'map', title: 'Farm Mapping', titleAr: 'رسم المزرعة', desc: 'Draw precise field boundaries on satellite imagery and compute real area in hectares and acres.', descAr: 'ارسم حدود الحقول بدقة على صور الأقمار الصناعية واحسب المساحة الفعلية بالهكتار والفدان.' },
+    { icon: 'satellite', title: 'Satellite Intelligence', titleAr: 'ذكاء الأقمار الصناعية', desc: 'Temperature, rainfall, soil moisture and vegetation indicators — each with source, period and confidence.', descAr: 'درجة الحرارة والأمطار ورطوبة التربة ومؤشرات الغطاء النباتي — كل منها بمصدره وفترته وثقته.' },
+    { icon: 'target', title: 'Farmer Goal Intelligence', titleAr: 'ذكاء أهداف المزارع', desc: 'Weight what matters to you — yield, water, soil, profit, resilience, inputs — and see rankings change.', descAr: 'حدد أولوياتك — الإنتاجية والمياه والتربة والربح والمرونة والمدخلات — وشاهد كيف يتغير الترتيب.' },
+    { icon: 'compare', title: 'Agricultural Strategy Comparison', titleAr: 'مقارنة الاستراتيجيات الزراعية', desc: 'Compare baseline, water-resilience and soil-and-climate strategies with explainable scoring.', descAr: 'قارن بين الاستراتيجية الأساسية ومرونة المياه ومرونة التربة والمناخ بتقييم قابل للتفسير.' },
+    { icon: 'flask', title: 'What-if Simulation', titleAr: 'محاكاة ماذا لو', desc: 'Adjust temperature, rainfall, water, and prices to see how rankings and risks shift.', descAr: 'عدّل الحرارة والأمطار والمياه والأسعار لترى كيف يتغير الترتيب والمخاطر.' },
+    { icon: 'file', title: 'Decision Reports', titleAr: 'تقارير القرار', desc: 'Generate a comprehensive, printable report including data limitations and review status.', descAr: 'أنشئ تقريرًا شاملًا قابلًا للطباعة يتضمن قيود البيانات وحالة المراجعة.' },
+  ];
+  const steps = [
+    { n: '01', title: 'Map Your Farm', titleAr: 'ارسم مزرعتك', desc: 'Define your farm location and field boundaries.' },
+    { n: '02', title: 'Understand Your Land', titleAr: 'افهم أرضك', desc: 'Explore environmental indicators and their data limitations.' },
+    { n: '03', title: 'Compare Strategies', titleAr: 'قارن الاستراتيجيات', desc: 'Set goals, weight priorities, review trade-offs.' },
+    { n: '04', title: 'Make Informed Decisions', titleAr: 'اتخذ قرارات مدروسة', desc: 'Simulate scenarios, request expert review, export a report.' },
+  ];
+  const sources = ['NASA POWER', 'GPM IMERG', 'SMAP', 'MODIS', 'Landsat', 'OpenStreetMap'];
+  const decorativeFields = seedFields.slice(0, 3).map(f => ({ ...f, label: lang === 'ar' ? f.nameAr : f.name }));
+
+  return (
+    <div className="min-h-screen bg-canvas">
+      <div className="sticky top-0 z-20 bg-canvas/85 backdrop-blur border-b border-line">
+        <div className="max-w-6xl mx-auto px-5 h-16 flex items-center gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-forest text-white grid place-items-center font-extrabold text-sm">S</div>
+            <div className="leading-tight">
+              <div className="font-extrabold text-sm tracking-wide text-forest">{t('brand')}</div>
+              <div className="text-[8px] tracking-[0.2em] text-muted font-bold">{t('brandSub')}</div>
+            </div>
+          </div>
+          <div className="ms-auto flex items-center gap-2">
+            <select value={lang} onChange={e => window.__setLang(e.target.value)}
+              className="text-xs font-semibold px-2 py-1.5 rounded-lg border border-line bg-white">
+              <option value="en">EN</option><option value="ar">AR</option>
+            </select>
+            <Button variant="outline" size="sm" onClick={() => setRoute('dashboard')}>{t('action.startExploring')}</Button>
+          </div>
+        </div>
+      </div>
+
+      <section className="relative overflow-hidden bg-forest text-white">
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #A8C3A0 0, transparent 40%), radial-gradient(circle at 80% 60%, #4A86B8 0, transparent 45%)' }} />
+        <div className="relative max-w-6xl mx-auto px-5 py-16 md:py-24 grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] font-bold text-sage mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-sage" /> AgriTech Decision Support
+            </span>
+            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight mb-5">{t('landing.heroTitle')}</h1>
+            <p className="text-sage text-base md:text-lg leading-relaxed mb-8 max-w-xl">{t('landing.heroSub')}</p>
+            <div className="flex flex-wrap gap-3">
+              <Button size="lg" className="bg-white !text-forest hover:bg-sage" onClick={() => setRoute('dashboard')} icon="arrowRight">
+                {t('action.exploreFarm')}
+              </Button>
+              <Button size="lg" variant="outline" className="!bg-transparent !border-white/30 !text-white hover:!bg-white/10"
+                onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}>
+                {t('action.howItWorks')}
+              </Button>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="bg-deep/60 border border-white/10 rounded-2xl p-3 shadow-lift backdrop-blur">
+              <div className="relative rounded-xl overflow-hidden h-64 md:h-80">
+                <LeafletMap center={[30.41, 31.21]} zoom={13} polygons={decorativeFields} className="w-full h-full" height="100%" />
+                <div className="absolute top-2 start-2 z-10">
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider bg-warn/90 text-forest px-2 py-1 rounded">
+                    <Icon name="info" size={10} /> {t('demoData')}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 text-[10px]">
+                {[{ icon: 'thermometer', label: lang === 'ar' ? 'حرارة' : 'Temp', v: '21.4°C' },
+                  { icon: 'rain', label: lang === 'ar' ? 'أمطار' : 'Rain', v: '27.7mm' },
+                  { icon: 'leaf', label: 'NDVI', v: '0.55' }].map(k => (
+                  <div key={k.label} className="bg-white/5 border border-white/10 rounded-lg p-2 flex items-center gap-1.5">
+                    <Icon name={k.icon} size={13} className="text-sage" />
+                    <div><div className="text-sage/70">{k.label}</div><div className="font-bold text-white">{k.v}</div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-5 py-16 md:py-20">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-ink">{t('landing.featuresTitle')}</h2>
+          <p className="text-muted mt-2 max-w-xl mx-auto text-sm">Six core capabilities designed around the decisions farmers actually have to make.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {features.map(f => (
+            <Card key={f.title} className="p-5 hover:shadow-lift transition-shadow">
+              <div className="w-10 h-10 rounded-xl bg-lightsage text-forest grid place-items-center mb-3"><Icon name={f.icon} size={19} /></div>
+              <h3 className="font-bold text-ink mb-1.5">{lang === 'ar' ? f.titleAr : f.title}</h3>
+              <p className="text-[13px] text-muted leading-relaxed">{lang === 'ar' ? f.descAr : f.desc}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section id="how" className="bg-lightsage/60 border-y border-line">
+        <div className="max-w-6xl mx-auto px-5 py-16 md:py-20">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-ink text-center mb-10">{t('landing.howTitle')}</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {steps.map((s, i) => (
+              <div key={s.n} className="relative">
+                <Card className="p-5 h-full">
+                  <div className="text-3xl font-extrabold text-sage mb-2">{s.n}</div>
+                  <h3 className="font-bold text-ink mb-1.5">{lang === 'ar' ? s.titleAr : s.title}</h3>
+                  <p className="text-[13px] text-muted leading-relaxed">{s.desc}</p>
+                </Card>
+                {i < steps.length - 1 && (
+                  <div className="hidden lg:block absolute top-1/2 -end-3 -translate-y-1/2 z-10 text-sage"><Icon name="arrowRight" size={18} /></div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-5 py-16 md:py-20">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-ink">{t('landing.dataTitle')}</h2>
+          <p className="text-muted mt-2 max-w-2xl mx-auto text-sm">{t('landing.dataNote')}</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2.5">
+          {sources.map(s => (
+            <div key={s} className="px-4 py-2.5 rounded-xl bg-white border border-line text-sm font-semibold text-forest flex items-center gap-2">
+              <Icon name="satellite" size={14} className="text-secondary" /> {s}
+            </div>
+          ))}
+        </div>
+        <p className="text-center text-[11px] text-muted mt-5 max-w-2xl mx-auto">
+          This frontend demo uses structured mock data only. No live NASA APIs are connected, and no fabricated values are presented as real measurements.
+        </p>
+      </section>
+
+      <section className="bg-forest text-white">
+        <div className="max-w-4xl mx-auto px-5 py-14 md:py-20 text-center">
+          <h2 className="text-2xl md:text-3xl font-extrabold mb-5">{t('landing.finalTitle')}</h2>
+          <Button size="lg" className="bg-white !text-forest hover:bg-sage" onClick={() => setRoute('dashboard')} icon="arrowRight">
+            {t('action.startExploring')}
+          </Button>
+        </div>
+      </section>
+
+      <footer className="border-t border-line bg-canvas">
+        <div className="max-w-6xl mx-auto px-5 py-8 flex flex-col sm:flex-row gap-3 items-center justify-between text-[11px] text-muted">
+          <div>© 2025 SOLDOC Virtual Farm — Concept demo. Not for production agricultural use.</div>
+          <DataBadge small />
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function KpiCard({ icon, label, value, unit, foot, tone = 'neutral' }) {
+  const tones = { neutral: 'text-forest bg-lightsage', warn: 'text-warn bg-warn/10', info: 'text-info bg-info/10', success: 'text-secondary bg-secondary/10' };
+  return (
+    <Card className="p-4">
+      <div className={`w-9 h-9 rounded-lg grid place-items-center mb-3 ${tones[tone]}`}><Icon name={icon} size={17} /></div>
+      <div className="text-[11px] font-semibold text-muted uppercase tracking-wide">{label}</div>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <div className="text-2xl font-extrabold text-ink leading-none">{value}</div>
+        {unit && <div className="text-[11px] text-muted font-medium">{unit}</div>}
+      </div>
+      {foot && <div className="mt-2">{foot}</div>}
+    </Card>
+  );
+}
+
+function DashboardPage({ setRoute, farms, fields, activeFarmId, activeField, role, goals, constraints }) {
+  const { t, lang } = useT();
+  const farm = farms.find(f => f.id === activeFarmId) || farms[0];
+  const farmFields = fields.filter(f => f.farmId === activeFarmId);
+  const totalHa = +farmFields.reduce((a, f) => a + f.areaHa, 0).toFixed(1);
+  const env = useMemo(() => envForField(activeField), [activeField]);
+  const weights = useMemo(() => computeWeights(goals), [goals]);
+  const ranked = useMemo(() => evaluateStrategies(activeField, weights, constraints, null), [activeField, weights, constraints]);
+  const topFeasible = ranked.find(s => s.feasible);
+  const avgWheat = (env.temperature.avg.reduce((a, b) => a + b, 0) / 12).toFixed(1);
+
+  return (
+    <div className="p-4 md:p-6 space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('dash.welcome')}</h2>
+          <p className="text-sm text-muted mt-0.5">{t('dash.welcomeSub')}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <DataBadge />
+          <Badge tone="info" icon="user">{t('role.' + role)}</Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard icon="layers" label={t('kpi.area')} value={totalHa} unit={t('kpi.areaUnit')}
+          foot={<span className="text-[11px] text-muted">≈ {(totalHa * 2.471).toFixed(1)} {t('common.acres')}</span>} />
+        <KpiCard icon="grid" label={t('kpi.fields')} value={farmFields.length} unit={t('kpi.fieldsUnit')}
+          foot={<span className="text-[11px] text-muted">{lang === 'ar' ? farm.nameAr : farm.name}</span>} />
+        <KpiCard icon="satellite" label={t('kpi.dataStatus')} value={t('kpi.partial')} tone="warn"
+          foot={<span className="text-[11px] text-warn flex items-center gap-1"><Icon name="alert" size={11} /> 1 of 3 datasets stale</span>} />
+        <KpiCard icon="target" label={t('kpi.strategy')}
+          value={topFeasible ? topFeasible.id : '—'}
+          tone={topFeasible ? 'info' : 'warn'}
+          foot={<button onClick={() => setRoute('strategy')} className="text-[11px] text-info font-semibold hover:underline">
+            {topFeasible ? `${lang === 'ar' ? topFeasible.nameAr : topFeasible.name} · ${topFeasible.total.toFixed(1)}/10 →` : t('strategy.noFeasible')}
+          </button>} />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 overflow-hidden">
+          <div className="p-4 pb-2 flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-ink text-sm">{t('section.farmMap')}</h3>
+              <p className="text-[11px] text-muted">{lang === 'ar' ? farm.locationAr : farm.location}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setRoute('mapping')} icon="map">{t('nav.mapping')}</Button>
+          </div>
+          <div className="px-3 pb-3">
+            <div className="rounded-xl overflow-hidden border border-line" style={{ height: 300 }}>
+              <LeafletMap center={[farm.lat, farm.lng]} zoom={14}
+                polygons={farmFields.map(f => ({ ...f, label: lang === 'ar' ? f.nameAr : f.name }))}
+                height="100%" className="w-full h-full" />
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2.5">
+              {farmFields.map(p => (
+                <span key={p.id} className={`inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md ${p.id === activeField?.id ? 'bg-secondary text-white font-semibold' : 'bg-lightsage/60 text-forest font-medium'}`}>
+                  <span className="w-2 h-2 rounded-sm" style={{ background: p.id === activeField?.id ? '#fff' : p.color }} />
+                  {lang === 'ar' ? p.nameAr : p.name} · {p.areaHa} ha
+                </span>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{t('section.insights')}</h3>
+          <div className="space-y-2.5">
+            {ALERTS.map(a => (
+              <div key={a.id} className={`rounded-lg border p-2.5 ${a.level === 'warn' ? 'border-warn/30 bg-warn/5' : 'border-info/20 bg-info/5'}`}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Icon name={a.icon} size={12} className={a.level === 'warn' ? 'text-warn' : 'text-info'} />
+                  <span className={`text-[10px] font-bold uppercase tracking-wide ${a.level === 'warn' ? 'text-warn' : 'text-info'}`}>
+                    {lang === 'ar' ? a.arT : a.enT}
+                  </span>
+                </div>
+                <p className="text-[11px] text-ink leading-relaxed">{lang === 'ar' ? a.ar : a.en}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-bold text-ink text-sm">{t('section.envOverview')}</h3>
+            {activeField && <div className="mt-0.5"><FieldContextBar field={activeField} compact /></div>}
+          </div>
+          <button onClick={() => setRoute('intel')} className="text-[11px] text-secondary font-semibold hover:underline">{t('intel.details')} →</button>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { key: 'temperature', icon: 'thermometer', color: '#E6A23C', label: t('intel.temperature'), data: env.temperature.avg, unit: env.temperature.unit, headline: env.temperature.headline },
+            { key: 'rainfall', icon: 'rain', color: '#4A86B8', label: t('intel.rainfall'), data: env.rainfall.values, unit: env.rainfall.unit, headline: env.rainfall.headline },
+            { key: 'soil', icon: 'droplet', color: '#477A5C', label: t('intel.soil'), data: env.soil.values, unit: env.soil.unit, headline: env.soil.headline },
+            { key: 'ndvi', icon: 'leaf', color: '#163D32', label: t('intel.ndvi'), data: env.ndvi.values, unit: 'index', headline: env.ndvi.headline },
+          ].map(c => {
+            const vals = Array.isArray(c.data) ? c.data : [c.data];
+            const W = 200, H = 56;
+            const min = Math.min(...vals), max = Math.max(...vals);
+            const pts = vals.map((v, i) => `${(i / Math.max(1, vals.length - 1)) * W},${H - ((v - min) / (max - min || 1)) * (H - 6) - 3}`).join(' ');
+            return (
+              <div key={c.key} className="rounded-xl border border-line p-3">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted">
+                  <Icon name={c.icon} size={12} style={{ color: c.color }} /> {c.label}
+                </div>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-lg font-extrabold text-ink">{c.headline}</span>
+                  <span className="text-[10px] text-muted">{c.unit}</span>
+                </div>
+                <svg viewBox={`0 0 ${W} ${H}`} className="w-full mt-1" style={{ height: 40 }}>
+                  <polyline points={pts} fill="none" stroke={c.color} strokeWidth="1.6" />
+                </svg>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{t('section.recent')}</h3>
+          <div className="divide-y divide-line">
+            {ACTIVITIES.map(a => (
+              <div key={a.id} className="flex items-center gap-3 py-2.5">
+                <div className="w-7 h-7 rounded-lg bg-lightsage text-forest grid place-items-center shrink-0"><Icon name={a.icon} size={13} /></div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12px] text-ink truncate">{lang === 'ar' ? a.ar : a.en}</div>
+                  <div className="text-[10px] text-muted">{lang === 'ar' ? a.timeAr : a.time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{t('action.continue')}</h3>
+          <div className="space-y-2">
+            {[{ label: t('nav.goals'), route: 'goals', icon: 'target' },
+              { label: t('nav.strategy'), route: 'strategy', icon: 'compare' },
+              { label: t('nav.simulator'), route: 'simulator', icon: 'flask' },
+              { label: t('nav.reports'), route: 'reports', icon: 'file' }].map(x => (
+              <button key={x.route} onClick={() => setRoute(x.route)}
+                className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border border-line hover:border-secondary hover:bg-lightsage/40 transition-colors text-start">
+                <Icon name={x.icon} size={14} className="text-secondary" />
+                <span className="text-xs font-semibold text-ink flex-1">{x.label}</span>
+                <Icon name="chevronRight" size={12} className="text-muted" />
+              </button>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   MY FARMS
+============================================================ */
+function FarmsPage({ farms, fields, setFarms, activeFarmId, setActiveFarmId, setActiveFieldId, setRoute }) {
+  const { t, lang } = useT();
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const statusLabel = s => ({ partial: t('kpi.partial'), ready: t('kpi.ready'), limited: t('kpi.limited') }[s] || s);
+  const statusTone = s => ({ partial: 'warn', ready: 'success', limited: 'danger' }[s] || 'neutral');
+
+  return (
+    <div className="p-4 md:p-6 space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('nav.farms')}</h2>
+          <p className="text-sm text-muted mt-0.5">
+            {farms.length} {lang === 'ar' ? 'مزارع' : 'farms'} · {fields.length} {t('common.fields')}
+          </p>
+        </div>
+        <Button icon="plus" onClick={() => setRoute('mapping')}>{t('action.newFarm')}</Button>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {farms.map(f => {
+          const ffs = fields.filter(x => x.farmId === f.id);
+          const totalHa = +ffs.reduce((a, x) => a + x.areaHa, 0).toFixed(1);
+          const mainCrop = ffs[0] ? (lang === 'ar' ? ffs[0].cropAr : ffs[0].crop) : '—';
+          return (
+            <Card key={f.id} className={`p-4 ${f.id === activeFarmId ? 'ring-2 ring-secondary/40' : ''}`}>
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="min-w-0">
+                  <div className="font-bold text-ink truncate">{lang === 'ar' ? f.nameAr : f.name}</div>
+                  <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5"><Icon name="map" size={10} /> {lang === 'ar' ? f.locationAr : f.location}</div>
+                </div>
+                <Badge tone={statusTone(f.status)}>{statusLabel(f.status)}</Badge>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div><div className="text-[9px] uppercase text-muted font-semibold">{t('common.area')}</div><div className="text-sm font-bold text-ink">{totalHa} ha</div></div>
+                <div><div className="text-[9px] uppercase text-muted font-semibold">{t('common.fields')}</div><div className="text-sm font-bold text-ink">{ffs.length}</div></div>
+                <div><div className="text-[9px] uppercase text-muted font-semibold">{t('common.crop')}</div><div className="text-sm font-bold text-ink truncate">{mainCrop}</div></div>
+              </div>
+              <div className="text-[10px] text-muted mb-3">{t('common.updated')}: {f.updated}</div>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setActiveFarmId(f.id); setRoute('dashboard'); }}>{t('action.open')}</Button>
+                <Button size="sm" variant="outline" onClick={() => { setActiveFarmId(f.id); setRoute('mapping'); }}><Icon name="edit" size={13} /></Button>
+                <Button size="sm" variant="outline" onClick={() => setConfirmDel(f.id)}><Icon name="trash" size={13} className="text-danger" /></Button>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 bg-deep/50 grid place-items-center p-4">
+          <Card className="max-w-sm w-full p-5">
+            <div className="flex items-center gap-2 text-danger mb-2"><Icon name="alert" size={18} /><span className="font-bold">{t('action.delete')}</span></div>
+            <p className="text-sm text-muted mb-4">This removes the demo farm from your local session. It cannot be undone.</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmDel(null)}>{t('action.cancel')}</Button>
+              <Button variant="danger" size="sm" onClick={() => { setFarms(fs => fs.filter(x => x.id !== confirmDel)); setConfirmDel(null); }}>{t('action.delete')}</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   FARM MAPPING
+============================================================ */
+const emptyForm = () => ({
+  name: '', crop: 'Wheat', cropAr: 'قمح', season: 'Winter 2025/26', seasonAr: 'شتاء 2025/26',
+  irrigation: 'Furrow', irrigationAr: 'أخاديد', soil: 'Clay loam', soilAr: 'طينية طميية',
+  plantingDate: '2025-11-15', notes: '',
+});
+
+const PALETTE = ['#4A86B8', '#477A5C', '#E6A23C', '#163D32', '#A8C3A0', '#D95C5C'];
+function pickColor(existing) {
+  const used = new Set(existing.map(f => f.color));
+  return PALETTE.find(c => !used.has(c)) || PALETTE[existing.length % PALETTE.length];
+}
+
+function MappingPage({ farms, fields, setFields, activeFarmId, activeField, setActiveFieldId, setRoute }) {
+  const { t, lang } = useT();
+  const farmFields = fields.filter(f => f.farmId === activeFarmId);
+  const [mode, setMode] = useState('idle'); // idle | draw | edit
+  const [points, setPoints] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyForm());
+  const [errors, setErrors] = useState({});
+  const [flash, setFlash] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const areaHa = useMemo(() => +(polygonAreaM2(points) / 10000).toFixed(2), [points]);
+  const areaAc = +(areaHa * 2.471).toFixed(2);
+
+  const onMapClick = useCallback(latlng => {
+    if (mode === 'draw' || mode === 'edit') setPoints(p => [...p, latlng]);
+  }, [mode]);
+
+  const resetForm = () => { setForm(emptyForm()); setErrors({}); };
+  const cancel = () => { setMode('idle'); setPoints([]); setEditingId(null); resetForm(); };
+
+  const startDraw = () => {
+    setMode('draw'); setPoints([]); setEditingId(null); resetForm();
+  };
+
+  const startEdit = f => {
+    setMode('edit'); setPoints(f.coords.slice()); setEditingId(f.id);
+    setForm({
+      name: f.name, crop: f.crop, cropAr: f.cropAr, season: f.season, seasonAr: f.seasonAr,
+      irrigation: f.irrigation, irrigationAr: f.irrigationAr, soil: f.soil, soilAr: f.soilAr,
+      plantingDate: f.plantingDate, notes: f.notes,
+    });
+    setErrors({});
+  };
+
+  const undo = () => setPoints(p => p.slice(0, -1));
+  const clearPoints = () => setPoints([]);
+
+  const validate = () => {
+    const errs = {};
+    if (!form.name.trim()) errs.name = t('map.validationName');
+    if (!form.crop || !form.soil || !form.irrigation) errs.meta = t('map.validationMeta');
+    if (points.length < 3) errs.polygon = t('map.validationPolygon');
+    return errs;
+  };
+
+  const finish = () => {
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    const data = {
+      id: editingId || 'fld-' + Date.now(),
+      farmId: activeFarmId,
+      name: form.name.trim(), nameAr: form.name.trim(),
+      color: editingId ? fields.find(f => f.id === editingId)?.color || pickColor(farmFields) : pickColor(farmFields),
+      coords: points.slice(),
+      crop: form.crop, cropAr: form.cropAr,
+      season: form.season, seasonAr: form.seasonAr,
+      irrigation: form.irrigation, irrigationAr: form.irrigationAr,
+      soil: form.soil, soilAr: form.soilAr,
+      plantingDate: form.plantingDate, notes: form.notes,
+      areaHa,
+      updatedAt: new Date().toISOString().slice(0, 10),
+    };
+    if (editingId) {
+      setFields(fs => fs.map(f => f.id === editingId ? data : f));
+      setFlash(t('map.fieldUpdated'));
+    } else {
+      setFields(fs => [...fs, data]);
+      setFlash(t('map.fieldSaved'));
+    }
+    setActiveFieldId(data.id);
+    setMode('idle'); setPoints([]); setEditingId(null); resetForm();
+    setTimeout(() => setFlash(null), 2200);
+  };
+
+  const removeField = id => {
+    setFields(fs => fs.filter(f => f.id !== id));
+    if (activeField?.id === id) {
+      const remaining = farmFields.filter(f => f.id !== id);
+      setActiveFieldId(remaining[0]?.id || null);
+    }
+    setFlash(t('map.fieldDeleted'));
+    setTimeout(() => setFlash(null), 2200);
+    setConfirmDel(null);
+  };
+
+  const polygons = useMemo(() => {
+    const list = farmFields.filter(f => f.id !== editingId).map(f => ({
+      ...f, label: `${lang === 'ar' ? f.nameAr : f.name} · ${f.areaHa} ha`,
+    }));
+    if (points.length >= 1) {
+      list.push({
+        id: 'draft', coords: points, color: '#4A86B8', draft: true,
+        label: points.length >= 3 ? `${areaHa.toFixed(2)} ha` : '',
+      });
+    }
+    return list;
+  }, [farmFields, points, areaHa, editingId, lang]);
+
+  const metaLabel = {
+    idle: t('map.modeIdle'),
+    draw: `${t('map.modeDraw')} (${points.length})`,
+    edit: `${t('map.modeEdit')} (${points.length})`,
+  }[mode];
+
+  const busy = mode === 'draw' || mode === 'edit';
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('nav.mapping')}</h2>
+          <p className="text-sm text-muted mt-0.5">
+            {lang === 'ar' ? 'حدد موقع المزرعة وارسم حدود الحقول لحساب المساحة تلقائيًا.' : 'Choose a location, draw field boundaries, and calculate area automatically.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <DataBadge />
+          {flash && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-secondary">
+              <Icon name="check" size={12} /> {flash}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 overflow-hidden">
+          <div className="p-3 flex flex-wrap items-center gap-1.5 border-b border-line">
+            {!busy && (
+              <Button size="sm" variant="primary" onClick={startDraw} icon="polygon">{t('action.startDraw')}</Button>
+            )}
+            {busy && (
+              <>
+                <Button size="sm" variant="outline" onClick={undo} disabled={points.length === 0} icon="cornerUpLeft">{t('action.undo')}</Button>
+                <Button size="sm" variant="outline" onClick={clearPoints} disabled={points.length === 0} icon="eraser">{t('action.clear')}</Button>
+                <Button size="sm" variant="primary" onClick={finish} disabled={points.length < 3} icon="check">{t('action.finish')}</Button>
+                <Button size="sm" variant="ghost" onClick={cancel} icon="x">{t('action.cancel')}</Button>
+              </>
+            )}
+            <div className="ms-auto flex items-center gap-2 text-[11px] text-muted">
+              <Icon name="info" size={12} />
+              <span>{metaLabel}</span>
+            </div>
+          </div>
+          <div className="p-3">
+            <div className="rounded-xl overflow-hidden border border-line" style={{ height: 440 }}>
+              <LeafletMap
+                center={[30.41, 31.21]} zoom={14}
+                polygons={polygons}
+                drawing={busy}
+                onMapClick={onMapClick}
+                onFieldClick={mode === 'idle' ? id => setActiveFieldId(id) : null}
+                height="100%" className="w-full h-full"
+              />
+            </div>
+            {busy && (
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs bg-lightsage/60 rounded-lg px-3 py-2">
+                <Icon name="weigh" size={14} className="text-forest" />
+                <span className="font-semibold text-forest">{areaHa} ha</span>
+                <span className="text-muted">≈ {areaAc} {t('common.acres')}</span>
+                <span className="text-muted">·</span>
+                <span className="text-muted">{points.length} {lang === 'ar' ? 'نقطة' : 'vertices'}</span>
+                <DataBadge small />
+              </div>
+            )}
+            {errors.polygon && (
+              <div className="mt-2 text-[11px] text-danger flex items-center gap-1">
+                <Icon name="alert" size={12} /> {errors.polygon}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        <div className="space-y-3">
+          <Card className="p-4">
+            <h3 className="font-bold text-ink text-sm mb-3 flex items-center gap-2">
+              {mode === 'edit' ? t('action.editField') : t('action.saveField')}
+              {mode === 'edit' && <Badge tone="info">{lang === 'ar' ? 'وضع التحرير' : 'Editing'}</Badge>}
+            </h3>
+            <div className="space-y-2.5">
+              <label className="block">
+                <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{lang === 'ar' ? 'اسم الحقل' : 'Field name'} *</span>
+                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder={lang === 'ar' ? 'مثال: حقل أ' : 'e.g. Field A'}
+                  className={`w-full mt-1 px-3 py-2 text-xs border rounded-lg focus:outline-none ${errors.name ? 'border-danger' : 'border-line focus:border-secondary'}`} />
+                {errors.name && <span className="text-[10px] text-danger">{errors.name}</span>}
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{t('common.crop')} *</span>
+                  <select value={form.crop}
+                    onChange={e => { const c = CROP_OPTIONS.find(o => o.en === e.target.value); setForm({ ...form, crop: c.en, cropAr: c.ar }); }}
+                    className="w-full mt-1 px-2 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+                    {CROP_OPTIONS.map(c => <option key={c.en} value={c.en}>{lang === 'ar' ? c.ar : c.en}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{t('common.soil')} *</span>
+                  <select value={form.soil}
+                    onChange={e => { const s = SOIL_OPTIONS.find(o => o.en === e.target.value); setForm({ ...form, soil: s.en, soilAr: s.ar }); }}
+                    className="w-full mt-1 px-2 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+                    {SOIL_OPTIONS.map(c => <option key={c.en} value={c.en}>{lang === 'ar' ? c.ar : c.en}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{t('common.irrigation')} *</span>
+                <select value={form.irrigation}
+                  onChange={e => { const i = IRRIGATION_OPTIONS.find(o => o.en === e.target.value); setForm({ ...form, irrigation: i.en, irrigationAr: i.ar }); }}
+                  className="w-full mt-1 px-2 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+                  {IRRIGATION_OPTIONS.map(c => <option key={c.en} value={c.en}>{lang === 'ar' ? c.ar : c.en}</option>)}
+                </select>
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{t('common.season')}</span>
+                  <select value={form.season}
+                    onChange={e => { const s = SEASON_OPTIONS.find(o => o.en === e.target.value); setForm({ ...form, season: s.en, seasonAr: s.ar }); }}
+                    className="w-full mt-1 px-2 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+                    {SEASON_OPTIONS.map(c => <option key={c.en} value={c.en}>{lang === 'ar' ? c.ar : c.en}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{t('common.planting')}</span>
+                  <input type="date" value={form.plantingDate} onChange={e => setForm({ ...form, plantingDate: e.target.value })}
+                    className="w-full mt-1 px-2 py-2 text-xs border border-line rounded-lg focus:outline-none focus:border-secondary" />
+                </label>
+              </div>
+
+              {errors.meta && <div className="text-[10px] text-danger flex items-center gap-1"><Icon name="alert" size={11} /> {errors.meta}</div>}
+
+              <div className="flex items-center justify-between bg-lightsage/60 rounded-lg px-3 py-2 text-xs">
+                <span className="text-muted">{t('common.area')}</span>
+                <span className="font-bold text-forest">{areaHa} ha · {areaAc} ac</span>
+              </div>
+
+              <div className="flex gap-1.5">
+                <Button className="flex-1" size="sm" onClick={finish} disabled={!busy || points.length < 3} icon="save">
+                  {mode === 'edit' ? t('action.save') : t('action.saveField')}
+                </Button>
+                {busy && <Button size="sm" variant="ghost" onClick={cancel}>{t('action.cancel')}</Button>}
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <h3 className="font-bold text-ink text-sm mb-2 flex items-center justify-between">
+              <span>{t('common.fields')}</span>
+              <span className="text-[10px] text-muted font-medium">{farmFields.length}</span>
+            </h3>
+            <div className="space-y-1.5 max-h-72 overflow-y-auto scroll-thin">
+              {farmFields.length === 0 && <div className="text-[11px] text-muted py-2">{t('map.noFields')}</div>}
+              {farmFields.map(f => (
+                <div key={f.id} className={`p-2 rounded-lg border transition-all ${activeField?.id === f.id ? 'border-secondary bg-lightsage/40' : 'border-line'}`}>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setActiveFieldId(f.id)} className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: f.color }} aria-label="select" />
+                    <button onClick={() => setActiveFieldId(f.id)} className="text-[11px] font-medium text-ink flex-1 truncate text-start">
+                      {lang === 'ar' ? f.nameAr : f.name}
+                    </button>
+                    <button onClick={() => startEdit(f)} className="p-1 text-muted hover:text-forest" title={t('action.edit')}>
+                      <Icon name="edit" size={12} />
+                    </button>
+                    <button onClick={() => setConfirmDel(f.id)} className="p-1 text-muted hover:text-danger" title={t('action.delete')}>
+                      <Icon name="trash" size={12} />
+                    </button>
+                  </div>
+                  <div className="text-[10px] text-muted ms-4.5 ps-0.5">
+                    {(lang === 'ar' ? f.cropAr : f.crop)} · {f.areaHa} ha
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {confirmDel && (
+        <div className="fixed inset-0 z-50 bg-deep/50 grid place-items-center p-4">
+          <Card className="max-w-sm w-full p-5">
+            <div className="flex items-center gap-2 text-danger mb-2"><Icon name="alert" size={18} /><span className="font-bold">{t('action.delete')}</span></div>
+            <p className="text-sm text-muted mb-4">{t('map.confirmDelete')}</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmDel(null)}>{t('action.cancel')}</Button>
+              <Button variant="danger" size="sm" onClick={() => removeField(confirmDel)}>{t('action.delete')}</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   FARM INTELLIGENCE
+============================================================ */
+function IntelPage({ field, farm }) {
+  const { t, lang } = useT();
+  const [tab, setTab] = useState('temperature');
+  const env = useMemo(() => envForField(field), [field]);
+
+  if (!field) {
+    return (
+      <div className="p-4 md:p-6">
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <Icon name="polygon" size={36} className="mx-auto text-muted mb-3" />
+          <h2 className="font-bold text-ink text-lg mb-1">{t('intel.noFieldTitle')}</h2>
+          <p className="text-sm text-muted">{t('intel.noFieldBody')}</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const configs = {
+    temperature: { title: t('intel.temperature'), icon: 'thermometer', color: '#E6A23C', data: env.temperature,
+      series: [{ values: env.temperature.avg, color: '#E6A23C', fill: true, label: 'Avg' }, { values: env.temperature.max, color: '#D95C5C', label: 'Max', dash: '4 3' }, { values: env.temperature.min, color: '#4A86B8', label: 'Min', dash: '4 3' }],
+      headline: env.temperature.headline, unit: env.temperature.unit },
+    rainfall: { title: t('intel.rainfall'), icon: 'rain', color: '#4A86B8', data: env.rainfall,
+      series: [{ values: env.rainfall.values, color: '#4A86B8', fill: true }], headline: env.rainfall.headline, unit: env.rainfall.unit, bar: true },
+    soil: { title: t('intel.soil'), icon: 'droplet', color: '#477A5C', data: env.soil,
+      series: [{ values: env.soil.values, color: '#477A5C', fill: true }], headline: env.soil.headline, unit: env.soil.unit, warn: t('intel.soilWarn') },
+    ndvi: { title: t('intel.ndvi'), icon: 'leaf', color: '#163D32', data: env.ndvi,
+      series: [{ values: env.ndvi.values, color: '#163D32', fill: true }], headline: env.ndvi.headline, unit: 'index', warn: t('intel.ndviWarn') },
+  };
+  const c = configs[tab];
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('intel.title')}</h2>
+          <p className="text-sm text-muted mt-0.5 max-w-2xl">{t('intel.sub')}</p>
+        </div>
+        <DataBadge />
+      </div>
+
+      <Card className="p-3">
+        <FieldContextBar field={field} farm={farm} />
+      </Card>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {Object.entries(configs).map(([key, cfg]) => (
+          <button key={key} onClick={() => setTab(key)}
+            className={`text-start p-3 rounded-xl border transition-all ${tab === key ? 'bg-forest text-white border-forest shadow-card' : 'bg-white border-line hover:border-secondary'}`}>
+            <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${tab === key ? 'text-sage' : 'text-muted'}`}>
+              <Icon name={cfg.icon} size={13} /> {cfg.title}
+            </div>
+            <div className={`text-xl font-extrabold mt-1 ${tab === key ? 'text-white' : 'text-ink'}`}>
+              {cfg.headline} <span className={`text-[10px] font-medium ${tab === key ? 'text-sage' : 'text-muted'}`}>{cfg.unit}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-ink text-sm flex items-center gap-1.5"><Icon name={c.icon} size={14} style={{ color: c.color }} /> {c.title}</h3>
+            <div className="flex items-center gap-2">
+              {c.series.length > 1 && c.series.map((s, i) => (
+                <span key={i} className="flex items-center gap-1 text-[10px] text-muted"><span className="w-2 h-0.5 rounded" style={{ background: s.color }} />{s.label}</span>
+              ))}
+            </div>
+          </div>
+          {c.bar
+            ? <BarChart labels={c.data.labels} values={c.data.values} color={c.color} height={240} />
+            : <LineChart labels={c.data.labels} series={c.series} height={240} />}
+          {c.warn && (
+            <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-warn/10 border border-warn/30 text-[11px] text-warn">
+              <Icon name="alert" size={13} className="shrink-0 mt-0.5" /> {c.warn}
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3 flex items-center gap-1.5">
+            {t('intel.details')}
+            <InfoTip text="Every dataset declares its source, observation window, spatial resolution, temporal resolution, confidence status and value type." />
+          </h3>
+          <dl className="space-y-2 text-[11px]">
+            {[
+              [t('intel.source'), c.data.meta.source],
+              [t('intel.period'), c.data.meta.period],
+              [t('intel.resolution'), c.data.meta.resolution],
+              [t('intel.temporal'), c.data.meta.temporal],
+              [t('intel.type'), c.data.meta.type === 'observed' ? t('intel.observed') : t('intel.calculated')],
+            ].map(([k, v]) => (
+              <div key={k} className="flex items-start justify-between gap-2 py-1.5 border-b border-line last:border-0">
+                <dt className="text-muted shrink-0">{k}</dt>
+                <dd className="font-semibold text-ink text-end">{v}</dd>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-2 py-1.5">
+              <dt className="text-muted">{t('intel.confidence')}</dt>
+              <dd><Badge tone={c.data.meta.confidence === 'low' ? 'danger' : 'warn'}>{t('common.' + c.data.meta.confidence)}</Badge></dd>
+            </div>
+          </dl>
+          <div className="mt-3 p-2.5 rounded-lg bg-lightsage/60 text-[10px] text-muted flex items-start gap-1.5">
+            <Icon name="lock" size={11} className="shrink-0 mt-0.5" />
+            Additional soil testing required for field-level pH, NPK and salinity. This demo does not fabricate those measurements.
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   FARMER GOALS
+============================================================ */
+function GoalsPage({ goals, setGoals, constraints, setConstraints, setRoute }) {
+  const { t, lang } = useT();
+  const total = Object.values(goals).reduce((a, b) => a + b, 0);
+  const valid = total === 100;
+  const [saved, setSaved] = useState(false);
+
+  const setWeight = (key, val) => setGoals(g => ({ ...g, [key]: Math.max(0, Math.min(100, Math.round(val))) }));
+  const equalize = () => {
+    const n = GOAL_DEFS.length, base = Math.floor(100 / n), rem = 100 - base * n;
+    const g = {}; GOAL_DEFS.forEach((d, i) => { g[d.key] = base + (i < rem ? 1 : 0); });
+    setGoals(g);
+  };
+  const reset = () => setGoals({ yield: 0, water: 0, soil: 0, profit: 0, resilience: 0, inputs: 0 });
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div>
+        <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('goals.title')}</h2>
+        <p className="text-sm text-muted mt-0.5 max-w-2xl">{t('goals.sub')}</p>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 p-4">
+          <div className="grid sm:grid-cols-2 gap-2.5">
+            {GOAL_DEFS.map(g => {
+              const active = goals[g.key] > 0;
+              return (
+                <div key={g.key} className={`p-3 rounded-xl border transition-all ${active ? 'border-secondary bg-lightsage/40' : 'border-line bg-white'}`}>
+                  <div className="flex items-start gap-2 mb-2">
+                    <div className={`w-8 h-8 rounded-lg grid place-items-center shrink-0 ${active ? 'bg-secondary text-white' : 'bg-lightsage text-forest'}`}>
+                      <Icon name={g.icon} size={15} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[12px] font-bold text-ink leading-tight">{lang === 'ar' ? g.labelAr : g.label}</div>
+                      <div className="text-[10px] text-muted leading-snug mt-0.5">{lang === 'ar' ? g.descAr : g.desc}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="range" min="0" max="100" value={goals[g.key]} onChange={e => setWeight(g.key, e.target.value)} className="flex-1" />
+                    <span className="text-[11px] font-bold text-forest w-9 text-end">{goals[g.key]}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        <div className="space-y-3">
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold uppercase text-muted tracking-wide">{t('goals.total')}</span>
+              <span className={`text-xl font-extrabold ${valid ? 'text-secondary' : 'text-danger'}`}>{total}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-lightsage overflow-hidden">
+              <div className={`h-full transition-all ${valid ? 'bg-secondary' : 'bg-danger'}`} style={{ width: Math.min(100, total) + '%' }} />
+            </div>
+            {!valid && <p className="text-[10px] text-danger mt-2 flex items-center gap-1"><Icon name="alert" size={11} /> {t('goals.mustEqual100')}</p>}
+            <div className="flex gap-1.5 mt-3">
+              <Button size="sm" variant="outline" className="flex-1" onClick={equalize}>{t('action.equalize')}</Button>
+              <Button size="sm" variant="ghost" onClick={reset}>{t('action.reset')}</Button>
+            </div>
+            <Button size="sm" className="w-full mt-2" disabled={!valid} icon="save"
+              onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 1800); }}>
+              {t('action.savePriorities')}
+            </Button>
+            {saved && <div className="text-[10px] text-secondary mt-2 flex items-center gap-1"><Icon name="check" size={11} /> {lang === 'ar' ? 'تم الحفظ' : 'Saved'}</div>}
+          </Card>
+
+          <Card className="p-4">
+            <h3 className="text-sm font-bold text-ink mb-1">{t('goals.constraints')}</h3>
+            <p className="text-[10px] text-muted leading-relaxed mb-2.5">{t('goals.constraintsSub')}</p>
+            <div className="space-y-1.5">
+              {CONSTRAINTS_DEF.map(c => (
+                <label key={c.key} className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer ${constraints[c.key] ? (c.hard ? 'bg-warn/10' : 'bg-lightsage/60') : 'hover:bg-lightsage/40'}`}>
+                  <input type="checkbox" checked={!!constraints[c.key]} onChange={e => setConstraints({ ...constraints, [c.key]: e.target.checked })}
+                    className="mt-0.5 accent-secondary" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-semibold text-ink">{lang === 'ar' ? c.labelAr : c.label}</div>
+                    <div className={`text-[10px] ${c.hard ? 'text-warn font-semibold' : 'text-muted'}`}>
+                      {c.hard ? t('goals.hard') : t('goals.soft')}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-ink text-sm">{t('goals.summary')}</h3>
+          <Button size="sm" variant="secondary" onClick={() => setRoute('strategy')} icon="compare">{t('nav.strategy')}</Button>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <div className="p-3 rounded-lg bg-lightsage/50">
+            <div className="text-[10px] uppercase font-bold text-muted mb-1.5">{lang === 'ar' ? 'الأهداف النشطة' : 'Active goals'}</div>
+            <div className="flex flex-wrap gap-1">
+              {GOAL_DEFS.filter(g => goals[g.key] > 0).map(g => (
+                <span key={g.key} className="text-[10px] px-1.5 py-0.5 rounded bg-white border border-line font-medium text-forest">{lang === 'ar' ? g.labelAr : g.label}</span>
+              ))}
+              {GOAL_DEFS.every(g => goals[g.key] === 0) && <span className="text-[10px] text-muted">{t('common.none')}</span>}
+            </div>
+          </div>
+          <div className="p-3 rounded-lg bg-lightsage/50">
+            <div className="text-[10px] uppercase font-bold text-muted mb-1.5">{lang === 'ar' ? 'القيود النشطة' : 'Active constraints'}</div>
+            <div className="flex flex-wrap gap-1">
+              {CONSTRAINTS_DEF.filter(c => constraints[c.key]).map(c => (
+                <span key={c.key} className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${c.hard ? 'bg-warn/10 border-warn/30 text-warn' : 'bg-white border-line text-forest'}`}>
+                  {lang === 'ar' ? c.labelAr : c.label}
+                </span>
+              ))}
+              {!CONSTRAINTS_DEF.some(c => constraints[c.key]) && <span className="text-[10px] text-muted">{t('common.none')}</span>}
+            </div>
+          </div>
+          <div className="p-3 rounded-lg bg-lightsage/50">
+            <div className="text-[10px] uppercase font-bold text-muted mb-1.5">{lang === 'ar' ? 'التأثير' : 'Effect'}</div>
+            <p className="text-[10px] text-ink leading-relaxed">
+              {lang === 'ar'
+                ? 'تُستخدم أوزان الأهداف لإعادة ترتيب الاستراتيجيات تلقائيًا في صفحة المقارنة.'
+                : 'Goal weights feed the scoring engine, which re-ranks strategies and flags infeasible ones on the comparison page.'}
+            </p>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   STRATEGY COMPARISON
+============================================================ */
+function StrategyPage({ field, goals, constraints }) {
+  const { t, lang } = useT();
+  const weights = useMemo(() => computeWeights(goals), [goals]);
+  const ranked = useMemo(() => evaluateStrategies(field, weights, constraints, null), [field, weights, constraints]);
+  const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    if (!expanded && ranked.length) setExpanded(ranked[0].id);
+  }, [ranked, expanded]);
+
+  const topFeasible = ranked.find(s => s.feasible);
+  const expandedStrategy = ranked.find(s => s.id === expanded) || ranked[0];
+
+  const equalW = useMemo(() => { const w = {}; CRITERIA.forEach(c => w[c.key] = 1 / CRITERIA.length); return w; }, []);
+  const waterW = useMemo(() => {
+    const w = {}; CRITERIA.forEach(c => w[c.key] = c.key === 'waterEfficiency' ? 0.4 : 0.6 / (CRITERIA.length - 1));
+    return w;
+  }, []);
+  const rankEqual = useMemo(() => evaluateStrategies(field, equalW, constraints, null), [field, equalW, constraints]);
+  const rankWater = useMemo(() => evaluateStrategies(field, waterW, constraints, null), [field, waterW, constraints]);
+
+  const activeConstraints = CONSTRAINTS_DEF.filter(c => constraints[c.key]);
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('strategy.title')}</h2>
+          <p className="text-sm text-muted mt-0.5 max-w-2xl">{t('strategy.sub')}</p>
+        </div>
+        <DataBadge />
+      </div>
+
+      {field && (
+        <Card className="p-3">
+          <div className="text-[10px] uppercase font-bold text-muted tracking-wide mb-1">{t('strategy.fieldContext')}</div>
+          <FieldContextBar field={field} />
+        </Card>
+      )}
+
+      {!topFeasible && (
+        <div className="rounded-xl border border-danger/30 bg-danger/5 p-3 flex items-start gap-2">
+          <Icon name="alert" size={14} className="text-danger shrink-0 mt-0.5" />
+          <p className="text-[11px] text-ink leading-relaxed">{t('strategy.noFeasible')}</p>
+        </div>
+      )}
+
+      {activeConstraints.length > 0 && (
+        <div className="rounded-xl border border-info/30 bg-info/5 p-3 flex items-start gap-2">
+          <Icon name="info" size={14} className="text-info shrink-0 mt-0.5" />
+          <div className="text-[11px] text-ink">
+            <span className="font-bold">{lang === 'ar' ? 'القيود النشطة:' : 'Active constraints:'}</span>{' '}
+            {activeConstraints.map(c => `${lang === 'ar' ? c.labelAr : c.label} (${c.hard ? t('goals.hard') : t('goals.soft')})`).join(' · ')}.
+          </div>
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-3 gap-3">
+        {ranked.map((s, idx) => {
+          const isTop = s.feasible && s.id === topFeasible?.id;
+          return (
+            <Card key={s.id} className={`p-4 ${isTop ? 'ring-2 ring-secondary/50' : ''} ${!s.feasible ? 'opacity-90 bg-canvas' : ''}`}>
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-lg grid place-items-center text-white font-extrabold" style={{ background: s.color }}>{s.id}</div>
+                  <div>
+                    <div className="font-bold text-ink text-[13px] leading-tight">{lang === 'ar' ? s.nameAr : s.name}</div>
+                    <div className="text-[10px] text-muted">
+                      {isTop ? t('strategy.topFeasible') : s.feasible ? `#${ranked.filter(x => x.feasible).indexOf(s) + 1}` : t('strategy.notRanked')}
+                    </div>
+                  </div>
+                </div>
+                {isTop && <Badge tone="success" icon="star">#1</Badge>}
+                {!s.feasible && <Badge tone="danger" icon="alert">{t('strategy.infeasible')}</Badge>}
+              </div>
+              <p className="text-[11px] text-muted leading-relaxed mb-2">{lang === 'ar' ? s.descAr : s.desc}</p>
+
+              {s.violations.length > 0 && (
+                <div className="mb-2 rounded-lg border border-danger/30 bg-danger/5 p-2">
+                  <div className="text-[9px] uppercase font-bold text-danger tracking-wide mb-0.5">{t('strategy.violates')}</div>
+                  {s.violations.map(v => (
+                    <div key={v.key} className="text-[10px] text-ink leading-snug">• {lang === 'ar' ? v.labelAr : v.label}</div>
+                  ))}
+                </div>
+              )}
+
+              {s.warnings.length > 0 && s.feasible && (
+                <div className="mb-2 rounded-lg border border-warn/30 bg-warn/5 p-2">
+                  <div className="text-[9px] uppercase font-bold text-warn tracking-wide mb-0.5">{lang === 'ar' ? 'تحذير' : 'Warning'}</div>
+                  {s.warnings.map(v => (
+                    <div key={v.key} className="text-[10px] text-ink leading-snug">• {lang === 'ar' ? v.labelAr : v.label}</div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-end justify-between mb-2">
+                <div>
+                  <div className="text-[9px] uppercase font-bold text-muted tracking-wide">{t('strategy.suitability')}</div>
+                  <div className={`text-2xl font-extrabold ${s.feasible ? 'text-ink' : 'text-muted line-through'}`}>
+                    {s.total.toFixed(1)}<span className="text-[11px] font-medium text-muted">/10</span>
+                  </div>
+                </div>
+                <div className="text-end">
+                  <div className="text-[9px] uppercase font-bold text-muted tracking-wide">{t('strategy.confidence')}</div>
+                  <div className="text-sm font-bold text-ink">{Math.round(s.confidence * 100)}%</div>
+                </div>
+              </div>
+
+              {s.missing.length > 0 && (
+                <div className="text-[10px] text-warn flex items-start gap-1">
+                  <Icon name="alert" size={11} className="mt-0.5 shrink-0" />
+                  <span>{t('strategy.missingData')}: {s.missing.join(', ')}</span>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid lg:grid-cols-5 gap-4">
+        <Card className="lg:col-span-2 p-4">
+          <h3 className="font-bold text-ink text-sm mb-2">{lang === 'ar' ? 'الملف التعريفي للمعايير' : 'Criterion Profile'}</h3>
+          <div style={{ height: 260 }}>
+            <RadarChart axes={CRITERIA.map(c => ({ ...c, short: (lang === 'ar' ? c.labelAr : c.label).slice(0, 9) }))}
+              series={ranked.map(s => ({ ...s, values: s.scores }))} size={260} />
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center mt-2">
+            {ranked.map(s => (
+              <span key={s.id} className={`flex items-center gap-1 text-[10px] ${s.feasible ? 'text-muted' : 'text-muted/60 line-through'}`}>
+                <span className="w-2 h-2 rounded-sm" style={{ background: s.color }} />{s.id}
+              </span>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="lg:col-span-3 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-ink text-sm">{t('strategy.scoring')}</h3>
+            <select value={expandedStrategy?.id || ''} onChange={e => setExpanded(e.target.value)}
+              className="text-xs border border-line rounded-lg px-2 py-1 bg-white focus:outline-none">
+              {ranked.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.id} · {lang === 'ar' ? s.nameAr : s.name} {!s.feasible ? '⚠' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          {expandedStrategy && (
+            <div>
+              <div className="grid grid-cols-12 gap-1 text-[9px] uppercase font-bold text-muted tracking-wide px-1 mb-1">
+                <div className="col-span-5">{t('strategy.criterion')}</div>
+                <div className="col-span-1 text-end">{t('strategy.raw')}</div>
+                <div className="col-span-2 text-end">{t('strategy.normalized')}</div>
+                <div className="col-span-2 text-end">{t('strategy.weight')}</div>
+                <div className="col-span-2 text-end">{t('strategy.contribution')}</div>
+              </div>
+              <div className="space-y-0.5">
+                {expandedStrategy.breakdown.map(b => (
+                  <div key={b.key} className="grid grid-cols-12 gap-1 items-center px-1 py-1.5 rounded hover:bg-lightsage/40 text-[11px]">
+                    <div className="col-span-5 text-ink font-medium truncate">{lang === 'ar' ? b.labelAr : b.label}</div>
+                    <div className="col-span-1 text-end text-muted">{b.raw}</div>
+                    <div className="col-span-2 text-end text-muted">{b.norm.toFixed(2)}</div>
+                    <div className="col-span-2 text-end text-muted">{(b.weight * 100).toFixed(1)}%</div>
+                    <div className="col-span-2 text-end font-bold text-forest">{b.contribution.toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 pt-2 border-t border-line flex items-center justify-between">
+                <span className="text-[11px] font-bold text-muted uppercase">{t('strategy.final')}</span>
+                <span className={`text-lg font-extrabold ${expandedStrategy.feasible ? 'text-forest' : 'text-muted'}`}>
+                  {expandedStrategy.total.toFixed(2)}
+                  <span className="text-[10px] font-medium text-muted">/10{!expandedStrategy.feasible ? ` · ${t('strategy.infeasible')}` : ''}</span>
+                </span>
+              </div>
+              <div className="mt-3 p-2.5 rounded-lg bg-lightsage/60">
+                <div className="text-[10px] font-bold text-forest mb-1">{t('strategy.why')}</div>
+                <p className="text-[11px] text-ink leading-relaxed">
+                  {!expandedStrategy.feasible
+                    ? (lang === 'ar'
+                        ? `لا يمكن التوصية بهذه الاستراتيجية لأنها تنتهك قيودًا صارمة: ${expandedStrategy.violations.map(v => v.labelAr).join('، ')}.`
+                        : `This strategy is not recommended because it violates hard constraints: ${expandedStrategy.violations.map(v => v.label).join(', ')}.`)
+                    : (lang === 'ar'
+                        ? `حصلت هذه الاستراتيجية على ترتيب ${ranked.filter(x => x.feasible).indexOf(expandedStrategy) + 1} لأن أعلى مساهماتها هي ${expandedStrategy.breakdown.slice(0, 2).map(b => b.labelAr).join(' و ')}، وهو ما يتوافق مع أوزان أهدافك الحالية.`
+                        : `This strategy ranked #${ranked.filter(x => x.feasible).indexOf(expandedStrategy) + 1} because its largest contributions come from ${expandedStrategy.breakdown.slice(0, 2).map(b => b.label).join(' and ')}, which align with your current goal weights.`)}
+                </p>
+                <p className="text-[10px] text-muted mt-1.5">
+                  {lang === 'ar' ? 'الملاءمة تقيس التوافق مع معاييرك؛ الثقة تقيس اكتمال المعلومات الداعمة. النتيجة العالية لا تعني ثقة عالية تلقائيًا.' : 'Suitability measures alignment with your criteria; confidence measures completeness of supporting information. A high score does not imply high confidence.'}
+                </p>
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <Card className="p-4 overflow-x-auto">
+        <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'مقارنة كاملة' : 'Full Comparison'}</h3>
+        <table className="w-full text-[11px] min-w-[560px]">
+          <thead>
+            <tr className="text-muted uppercase text-[9px] tracking-wide border-b border-line">
+              <th className="text-start py-2 font-bold">{t('strategy.criterion')}</th>
+              {ranked.map(s => <th key={s.id} className="text-center py-2 font-bold">{s.id}{!s.feasible ? ' ⚠' : ''}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {CRITERIA.map(c => (
+              <tr key={c.key} className="border-b border-line last:border-0">
+                <td className="py-2 text-ink font-medium">{lang === 'ar' ? c.labelAr : c.label}</td>
+                {ranked.map(s => {
+                  const v = s.scores[c.key];
+                  return (
+                    <td key={s.id} className="py-2 text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 rounded-full bg-lightsage overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: (v * 10) + '%', background: s.color }} />
+                        </div>
+                        <span className="font-bold text-ink w-4 text-end">{v}</span>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="font-bold text-ink text-sm mb-3">{t('strategy.sensitivity')}</h3>
+        <div className="grid sm:grid-cols-3 gap-3">
+          {[{ title: lang === 'ar' ? 'أولوياتك' : 'Your priorities', data: ranked },
+            { title: lang === 'ar' ? 'أوزان متساوية' : 'Equal weights', data: rankEqual },
+            { title: lang === 'ar' ? 'المياه أولًا' : 'Water-first', data: rankWater }].map(prof => (
+            <div key={prof.title} className="p-3 rounded-lg border border-line">
+              <div className="text-[10px] uppercase font-bold text-muted mb-2">{prof.title}</div>
+              {prof.data.map((s, i) => {
+                const feasible = prof.data.filter(x => x.feasible);
+                const rank = s.feasible ? feasible.indexOf(s) + 1 : '—';
+                return (
+                  <div key={s.id} className="flex items-center justify-between py-1 text-[11px]">
+                    <span className={`flex items-center gap-1.5 ${!s.feasible ? 'opacity-50 line-through' : ''}`}>
+                      <span className="w-4 h-4 rounded text-[9px] font-bold text-white grid place-items-center" style={{ background: s.color }}>{rank}</span>
+                      {s.id}
+                    </span>
+                    <span className="font-bold text-ink">{s.total.toFixed(1)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   WHAT-IF SIMULATOR
+============================================================ */
+function SimulatorPage({ field, goals, constraints, simulation, setSimulation }) {
+  const { t, lang } = useT();
+  const weights = useMemo(() => computeWeights(goals), [goals]);
+  const baselineResults = useMemo(() => evaluateStrategies(field, weights, constraints, null), [field, weights, constraints]);
+  const modifiedResults = useMemo(() => evaluateStrategies(field, weights, constraints, simulation), [field, weights, constraints, simulation]);
+
+  const baseline = { temp: 21.4, rain: 27.7, water: 1.0, inputPrice: 1.0, marketPrice: 1.0 };
+  const modified = {
+    temp: +(baseline.temp + simulation.temp).toFixed(1),
+    rain: +(baseline.rain * (1 + simulation.rain / 100)).toFixed(1),
+    water: +(baseline.water * (1 + simulation.water / 100)).toFixed(2),
+    inputPrice: +(baseline.inputPrice * (1 + simulation.inputPrice / 100)).toFixed(2),
+    marketPrice: +(baseline.marketPrice * (1 + simulation.marketPrice / 100)).toFixed(2),
+  };
+  const hasChanges = Object.values(simulation).some(v => v !== 0);
+
+  const sliders = [
+    { key: 'temp', label: lang === 'ar' ? 'الحرارة' : 'Temperature', min: -4, max: 6, step: 0.5, unit: '°C' },
+    { key: 'rain', label: lang === 'ar' ? 'الأمطار' : 'Rainfall', min: -50, max: 60, step: 5, unit: '%' },
+    { key: 'water', label: lang === 'ar' ? 'توفر المياه' : 'Water Availability', min: -40, max: 30, step: 5, unit: '%' },
+    { key: 'inputPrice', label: lang === 'ar' ? 'أسعار المدخلات' : 'Input Prices', min: -20, max: 40, step: 5, unit: '%' },
+    { key: 'marketPrice', label: lang === 'ar' ? 'أسعار السوق' : 'Crop Market Prices', min: -30, max: 30, step: 5, unit: '%' },
+  ];
+
+  const reset = () => setSimulation({ temp: 0, rain: 0, water: 0, inputPrice: 0, marketPrice: 0 });
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('sim.title')}</h2>
+          <p className="text-sm text-muted mt-0.5 max-w-2xl">{t('sim.sub')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <DataBadge />
+          <Button variant="outline" size="sm" icon="rotate" onClick={reset} disabled={!hasChanges}>{t('action.reset')}</Button>
+        </div>
+      </div>
+
+      {field && <Card className="p-3"><FieldContextBar field={field} /></Card>}
+
+      <div className="rounded-xl border border-warn/30 bg-warn/5 p-3 flex items-start gap-2">
+        <Icon name="alert" size={14} className="text-warn shrink-0 mt-0.5" />
+        <p className="text-[11px] text-ink leading-relaxed">{t('sim.note')}</p>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'متغيرات السيناريو' : 'Scenario Variables'}</h3>
+          <div className="space-y-4">
+            {sliders.map(s => (
+              <div key={s.key}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-semibold text-ink">{s.label}</span>
+                  <span className={`text-[11px] font-bold ${simulation[s.key] === 0 ? 'text-muted' : simulation[s.key] > 0 ? 'text-danger' : 'text-info'}`}>
+                    {simulation[s.key] > 0 ? '+' : ''}{simulation[s.key]}{s.unit}
+                  </span>
+                </div>
+                <input type="range" min={s.min} max={s.max} step={s.step} value={simulation[s.key]}
+                  onChange={e => setSimulation({ ...simulation, [s.key]: +e.target.value })} className="w-full" />
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div className="lg:col-span-2 space-y-3">
+          <Card className="p-4">
+            <h3 className="font-bold text-ink text-sm mb-3">{t('sim.baseline')} vs {t('sim.modified')}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                { label: lang === 'ar' ? 'الحرارة' : 'Temperature', b: baseline.temp, m: modified.temp, u: '°C' },
+                { label: lang === 'ar' ? 'الأمطار' : 'Rainfall', b: baseline.rain, m: modified.rain, u: 'mm' },
+                { label: lang === 'ar' ? 'المياه' : 'Water', b: baseline.water, m: modified.water, u: '×' },
+                { label: lang === 'ar' ? 'المدخلات' : 'Inputs', b: baseline.inputPrice, m: modified.inputPrice, u: '×' },
+                { label: lang === 'ar' ? 'السوق' : 'Market', b: baseline.marketPrice, m: modified.marketPrice, u: '×' },
+              ].map(x => {
+                const diff = x.m - x.b;
+                return (
+                  <div key={x.label} className="p-2.5 rounded-lg border border-line">
+                    <div className="text-[9px] uppercase font-bold text-muted">{x.label}</div>
+                    <div className="flex items-baseline gap-1.5 mt-1">
+                      <span className="text-xs text-muted line-through">{x.b}{x.u}</span>
+                      <span className="text-sm font-bold text-ink">{x.m}{x.u}</span>
+                    </div>
+                    <div className={`text-[10px] font-semibold ${diff > 0 ? 'text-danger' : diff < 0 ? 'text-info' : 'text-muted'}`}>
+                      {diff === 0 ? '—' : `${diff > 0 ? '+' : ''}${diff.toFixed(2)}`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <h3 className="font-bold text-ink text-sm mb-2">{t('sim.scoreChange')}</h3>
+            {!hasChanges && (
+              <p className="text-[11px] text-muted italic py-2">{t('sim.noChanges')}</p>
+            )}
+            {hasChanges && (
+              <div className="space-y-1.5">
+                {modifiedResults.map((s, i) => {
+                  const base = baselineResults.find(b => b.id === s.id);
+                  const delta = +(s.total - base.total).toFixed(2);
+                  const baseRank = base.feasible ? baselineResults.filter(x => x.feasible).indexOf(base) + 1 : '—';
+                  const modRank = s.feasible ? modifiedResults.filter(x => x.feasible).indexOf(s) + 1 : '—';
+                  const rankDelta = (typeof baseRank === 'number' && typeof modRank === 'number') ? (baseRank - modRank) : 0;
+                  return (
+                    <div key={s.id} className={`flex items-center gap-2 text-[11px] ${!s.feasible ? 'opacity-60' : ''}`}>
+                      <span className={`w-5 h-5 rounded text-[10px] font-bold text-white grid place-items-center shrink-0 ${!s.feasible ? 'opacity-50' : ''}`} style={{ background: s.color }}>
+                        {s.feasible ? modRank : '—'}
+                      </span>
+                      <span className={`font-medium text-ink flex-1 truncate ${!s.feasible ? 'line-through' : ''}`}>{lang === 'ar' ? s.nameAr : s.name}</span>
+                      <div className="w-24 h-1.5 rounded-full bg-lightsage overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: (s.total * 10) + '%', background: s.color }} />
+                      </div>
+                      <span className="font-bold text-ink w-8 text-end">{s.total.toFixed(1)}</span>
+                      <span className={`w-10 text-end text-[10px] font-bold ${delta > 0 ? 'text-secondary' : delta < 0 ? 'text-danger' : 'text-muted'}`}>
+                        {delta === 0 ? '—' : `${delta > 0 ? '+' : ''}${delta}`}
+                      </span>
+                      <span className={`w-8 text-end text-[10px] font-bold ${rankDelta > 0 ? 'text-secondary' : rankDelta < 0 ? 'text-danger' : 'text-muted'}`}>
+                        {rankDelta === 0 ? '—' : rankDelta > 0 ? `↑${rankDelta}` : `↓${-rankDelta}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {hasChanges && (
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{t('sim.whyChanged')}</h3>
+          <div className="space-y-2.5">
+            {modifiedResults.map(s => {
+              const base = baselineResults.find(b => b.id === s.id);
+              const changes = CRITERIA.map(c => ({
+                key: c.key,
+                label: lang === 'ar' ? c.labelAr : c.label,
+                before: base.scores[c.key],
+                after: s.scores[c.key],
+                delta: +(s.scores[c.key] - base.scores[c.key]).toFixed(2),
+              }))
+                .filter(c => Math.abs(c.delta) > 0.01)
+                .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+                .slice(0, 2);
+
+              if (changes.length === 0) return null;
+              return (
+                <div key={s.id} className="p-2.5 rounded-lg border border-line">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-4 h-4 rounded text-[9px] font-bold text-white grid place-items-center" style={{ background: s.color }}>{s.id}</span>
+                    <span className="text-[11px] font-semibold text-ink">{lang === 'ar' ? s.nameAr : s.name}</span>
+                  </div>
+                  <div className="text-[10px] text-muted leading-relaxed">
+                    {changes.map(c => (
+                      <span key={c.key} className="inline-flex items-center gap-1 me-2">
+                        <span className="font-medium text-ink">{c.label}</span>
+                        <span className="text-muted">{c.before} → {c.after}</span>
+                        <span className={c.delta > 0 ? 'text-secondary font-bold' : 'text-danger font-bold'}>
+                          {c.delta > 0 ? '+' : ''}{c.delta}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   ECONOMIC PLANNER
+============================================================ */
+function EconomicsPage({ field }) {
+  const { t, lang } = useT();
+  const [scenario, setScenario] = useState('baseline');
+  const assumptions = {
+    conservative: { yield: 5.2, price: 220, seed: 3200, fert: 4100, irrig: 2600, other: 1800 },
+    baseline: { yield: 6.1, price: 260, seed: 2900, fert: 3700, irrig: 2200, other: 1600 },
+    optimistic: { yield: 7.0, price: 300, seed: 2700, fert: 3400, irrig: 1900, other: 1500 },
+  };
+  const a = assumptions[scenario];
+  const revenue = a.yield * a.price;
+  const totalCost = a.seed + a.fert + a.irrig + a.other;
+  const net = revenue - totalCost;
+  const fieldHa = field?.areaHa || 1;
+  const fieldNet = Math.round(net * fieldHa);
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div>
+        <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('nav.economics')}</h2>
+        <p className="text-sm text-muted mt-0.5 max-w-2xl">
+          {lang === 'ar' ? 'تقديرات التكلفة والإيرادات بناءً على افتراضات توضيحية، وليست نتائج مالية مضمونة.' : 'Cost and revenue estimates based on illustrative assumptions — not guaranteed financial results.'}
+        </p>
+      </div>
+
+      {field && <Card className="p-3"><FieldContextBar field={field} /></Card>}
+
+      <div className="grid md:grid-cols-3 gap-3">
+        {['conservative', 'baseline', 'optimistic'].map(s => {
+          const sa = assumptions[s];
+          const sNet = (sa.yield * sa.price) - (sa.seed + sa.fert + sa.irrig + sa.other);
+          return (
+            <button key={s} onClick={() => setScenario(s)}
+              className={`text-start p-4 rounded-2xl border transition-all ${scenario === s ? 'bg-forest text-white border-forest shadow-lift' : 'bg-white border-line hover:border-secondary'}`}>
+              <div className={`text-[10px] uppercase font-bold tracking-wide ${scenario === s ? 'text-sage' : 'text-muted'}`}>
+                {lang === 'ar' ? ({ conservative: 'متحفظ', baseline: 'أساسي', optimistic: 'متفائل' })[s] : s}
+              </div>
+              <div className={`text-2xl font-extrabold mt-1 ${scenario === s ? 'text-white' : 'text-ink'}`}>
+                {sNet.toLocaleString()}
+                <span className={`text-[10px] font-medium ${scenario === s ? 'text-sage' : 'text-muted'}`}> EGP/ha</span>
+              </div>
+              <div className={`text-[10px] mt-1 ${scenario === s ? 'text-sage' : 'text-muted'}`}>{lang === 'ar' ? 'صافي العائد التقديري' : 'Estimated net return'}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'تفصيل التكاليف' : 'Cost Breakdown'}</h3>
+          <div className="space-y-2 text-[12px]">
+            {[
+              [lang === 'ar' ? 'البذور' : 'Seeds', a.seed],
+              [lang === 'ar' ? 'الأسمدة' : 'Fertilizer', a.fert],
+              [lang === 'ar' ? 'الري' : 'Irrigation', a.irrig],
+              [lang === 'ar' ? 'أخرى' : 'Other inputs', a.other],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <div className="flex justify-between mb-1"><span className="text-muted">{k}</span><span className="font-bold text-ink">{v.toLocaleString()}</span></div>
+                <div className="h-1.5 rounded-full bg-lightsage overflow-hidden"><div className="h-full bg-secondary rounded-full" style={{ width: (v / totalCost * 100) + '%' }} /></div>
+              </div>
+            ))}
+            <div className="pt-2 border-t border-line flex justify-between font-bold text-ink">
+              <span>{lang === 'ar' ? 'إجمالي التكلفة' : 'Total cost'}</span><span>{totalCost.toLocaleString()}</span>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'الإيرادات والصافي' : 'Revenue & Net'}</h3>
+          <div className="space-y-2 text-[12px]">
+            <div className="flex justify-between"><span className="text-muted">{lang === 'ar' ? 'الإنتاج المتوقع' : 'Expected yield'}</span><span className="font-bold">{a.yield} t/ha</span></div>
+            <div className="flex justify-between"><span className="text-muted">{lang === 'ar' ? 'سعر السوق' : 'Market price'}</span><span className="font-bold">{a.price} EGP/t</span></div>
+            <div className="flex justify-between"><span className="text-muted">{lang === 'ar' ? 'الإيرادات' : 'Revenue'}</span><span className="font-bold">{revenue.toLocaleString()}</span></div>
+            <div className="pt-2 border-t border-line flex justify-between text-base font-extrabold text-forest">
+              <span>{lang === 'ar' ? 'صافي العائد' : 'Net return'}</span><span>{net.toLocaleString()}</span>
+            </div>
+            {field && (
+              <div className="flex justify-between text-[11px] text-muted">
+                <span>{lang === 'ar' ? 'على مستوى الحقل' : 'Field-level net'} ({field.areaHa} ha)</span>
+                <span className="font-semibold text-forest">{fieldNet.toLocaleString()} EGP</span>
+              </div>
+            )}
+          </div>
+          <div className="mt-3 p-2.5 rounded-lg bg-warn/10 border border-warn/30 text-[10px] text-warn flex items-start gap-1.5">
+            <Icon name="alert" size={11} className="shrink-0 mt-0.5" />
+            {lang === 'ar' ? 'افتراضات توضيحية فقط — غير مضمونة.' : 'Illustrative assumptions only — not guaranteed.'}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   AGRONOMIST REVIEW
+============================================================ */
+function ReviewPage({ field, goals, constraints }) {
+  const { t, lang } = useT();
+  const [status, setStatus] = useState('pending');
+  const [notes, setNotes] = useState('');
+  const weights = useMemo(() => computeWeights(goals), [goals]);
+  const ranked = useMemo(() => evaluateStrategies(field, weights, constraints, null), [field, weights, constraints]);
+  const top = ranked.find(s => s.feasible);
+
+  const statuses = [
+    { k: 'pending', label: lang === 'ar' ? 'قيد الانتظار' : 'Pending Review', tone: 'warn' },
+    { k: 'under', label: lang === 'ar' ? 'قيد المراجعة' : 'Under Review', tone: 'info' },
+    { k: 'approved', label: lang === 'ar' ? 'معتمد' : 'Approved', tone: 'success' },
+    { k: 'revision', label: lang === 'ar' ? 'يحتاج تعديلًا' : 'Needs Revision', tone: 'danger' },
+  ];
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div>
+        <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('review.title')}</h2>
+        <p className="text-sm text-muted mt-0.5 max-w-2xl">{t('review.sub')}</p>
+      </div>
+
+      {field && <Card className="p-3"><FieldContextBar field={field} /></Card>}
+
+      <div className="rounded-xl border border-info/30 bg-info/5 p-3 flex items-start gap-2">
+        <Icon name="shield" size={14} className="text-info shrink-0 mt-0.5" />
+        <p className="text-[11px] text-ink leading-relaxed">
+          {lang === 'ar'
+            ? 'يجب مراجعة خبير زراعي قبل تطبيق أي توصية زراعية غير معتمدة من هذا النظام التجريبي.'
+            : 'An expert review is required before applying any unvalidated agricultural recommendation from this demo system.'}
+        </p>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'ملخص المراجعة' : 'Review Summary'}</h3>
+          <div className="space-y-2 text-[12px]">
+            {[
+              [lang === 'ar' ? 'الحقل' : 'Field', field ? (lang === 'ar' ? field.nameAr : field.name) : t('common.noField')],
+              [lang === 'ar' ? 'المحصول والموسم' : 'Crop & season', field ? `${lang === 'ar' ? field.cropAr : field.crop} · ${lang === 'ar' ? field.seasonAr : field.season}` : '—'],
+              [lang === 'ar' ? 'الري والتربة' : 'Irrigation & soil', field ? `${lang === 'ar' ? field.irrigationAr : field.irrigation} · ${lang === 'ar' ? field.soilAr : field.soil}` : '—'],
+              [lang === 'ar' ? 'الاستراتيجية المقترحة' : 'Proposed strategy', top ? `${top.id} · ${lang === 'ar' ? top.nameAr : top.name}` : t('common.none')],
+              [lang === 'ar' ? 'الملاءمة' : 'Suitability', top ? `${top.total.toFixed(2)} / 10` : '—'],
+              [lang === 'ar' ? 'الثقة' : 'Confidence', top ? `${Math.round(top.confidence * 100)}%` : '—'],
+              [lang === 'ar' ? 'قيود البيانات' : 'Data limitations', lang === 'ar' ? 'لا توجد قياسات تربة موثقة؛ رطوبة التربة بدقة 9 كم' : 'No verified soil tests; soil moisture at ~9 km resolution'],
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-2 py-1.5 border-b border-line last:border-0">
+                <span className="text-muted">{k}</span><span className="font-semibold text-ink text-end">{v}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'حالة المراجعة' : 'Review Status'}</h3>
+          <div className="space-y-1.5 mb-3">
+            {statuses.map(s => (
+              <button key={s.k} onClick={() => setStatus(s.k)}
+                className={`w-full flex items-center gap-2 p-2 rounded-lg border text-start text-[11px] transition-colors ${status === s.k ? 'border-secondary bg-lightsage/60 font-bold' : 'border-line hover:bg-lightsage/30'}`}>
+                <span className={`w-2 h-2 rounded-full ${status === s.k ? 'bg-secondary' : 'bg-line'}`} />
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <label className="block">
+            <span className="text-[10px] uppercase font-bold text-muted">{lang === 'ar' ? 'ملاحظات الخبير' : 'Expert comments'}</span>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows="4"
+              className="w-full mt-1 px-2.5 py-2 text-xs border border-line rounded-lg focus:outline-none focus:border-secondary resize-none"
+              placeholder={lang === 'ar' ? 'أضف ملاحظات المراجعة…' : 'Add review comments…'} />
+          </label>
+          <Button size="sm" className="w-full mt-2" icon="check">{lang === 'ar' ? 'حفظ المراجعة' : 'Save Review'}</Button>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   DECISION REPORTS
+============================================================ */
+function ReportsPage({ farms, activeFarmId, field, goals, constraints, simulation }) {
+  const { t, lang } = useT();
+  const farm = farms.find(f => f.id === activeFarmId) || farms[0];
+  const weights = useMemo(() => computeWeights(goals), [goals]);
+  const ranked = useMemo(() => evaluateStrategies(field, weights, constraints, null), [field, weights, constraints]);
+  const rankedWithSim = useMemo(() => evaluateStrategies(field, weights, constraints, simulation), [field, weights, constraints, simulation]);
+  const top = ranked.find(s => s.feasible);
+  const env = useMemo(() => envForField(field), [field]);
+  const date = new Date().toISOString().slice(0, 10);
+  const hasSim = Object.values(simulation).some(v => v !== 0);
+
+  const sections = [
+    [lang === 'ar' ? 'معلومات المزرعة' : 'Farm Information', `${lang === 'ar' ? farm.nameAr : farm.name} · ${lang === 'ar' ? farm.locationAr : farm.location}`],
+    [lang === 'ar' ? 'الحقل المحدد' : 'Selected Field', field ? `${lang === 'ar' ? field.nameAr : field.name} · ${field.areaHa} ha · ${lang === 'ar' ? field.cropAr : field.crop} · ${lang === 'ar' ? field.seasonAr : field.season}` : t('common.noField')],
+    [lang === 'ar' ? 'حدود الحقول' : 'Field Boundaries', field ? `${field.coords.length} ${lang === 'ar' ? 'رأس' : 'vertices'} · ${field.areaHa} ha` : '—'],
+    [lang === 'ar' ? 'النظرة البيئية' : 'Environmental Overview', field
+      ? (lang === 'ar'
+        ? `حرارة ${env.temperature.headline}°م · أمطار ${env.rainfall.headline}مم · رطوبة ${env.soil.headline} · NDVI ${env.ndvi.headline}`
+        : `Temp ${env.temperature.headline}°C · Rain ${env.rainfall.headline} mm · Soil ${env.soil.headline} m³/m³ · NDVI ${env.ndvi.headline}`)
+      : '—'],
+    [lang === 'ar' ? 'مصادر البيانات' : 'Data Sources', 'NASA POWER · GPM IMERG · SMAP · MODIS · Landsat (demo labels only)'],
+    [lang === 'ar' ? 'أهداف المزارع' : 'Farmer Goals', GOAL_DEFS.filter(g => goals[g.key] > 0).map(g => `${lang === 'ar' ? g.labelAr : g.label} (${goals[g.key]}%)`).join(' · ') || t('common.none')],
+    [lang === 'ar' ? 'القيود المختارة' : 'Selected Constraints', CONSTRAINTS_DEF.filter(c => constraints[c.key]).map(c => lang === 'ar' ? c.labelAr : c.label).join(' · ') || t('common.none')],
+    [lang === 'ar' ? 'مقارنة الاستراتيجيات' : 'Strategy Comparison', ranked.map(s => `${s.id}${s.feasible ? '' : ' ⚠'}: ${s.total.toFixed(2)}`).join(' · ')],
+    [lang === 'ar' ? 'الاستراتيجية الموصى بها' : 'Recommended Strategy', top ? `${top.id} · ${lang === 'ar' ? top.nameAr : top.name} (${top.total.toFixed(2)}/10)` : t('strategy.noFeasible')],
+    [lang === 'ar' ? 'شرح التقييم' : 'Scoring Explanation', lang === 'ar'
+      ? 'الأوزان مشتقة من أولويات المزارع ومطبَّعة إلى 100%. الاستراتيجيات التي تنتهك القيود الصارمة لا تُرتَّب.'
+      : 'Weights derived from farmer priorities and normalized to 100%. Strategies violating hard constraints are not ranked.'],
+    [lang === 'ar' ? 'تقييم الثقة' : 'Confidence Assessment', ranked.map(s => `${s.id}: ${Math.round(s.confidence * 100)}%`).join(' · ')],
+    [lang === 'ar' ? 'المخاطر البيئية' : 'Environmental Risks', lang === 'ar' ? 'محدودية المياه · جودة بيانات التربة' : 'Water availability · soil data quality'],
+    [lang === 'ar' ? 'قيود البيانات' : 'Data Limitations', lang === 'ar' ? 'دقة رطوبة التربة ~9 كم · لا توجد فحوص تربة موثقة' : 'Soil moisture ~9 km resolution · no verified soil tests'],
+    [lang === 'ar' ? 'حالة مراجعة الخبير' : 'Agronomist Review Status', lang === 'ar' ? 'قيد الانتظار — مطلوب مراجعة' : 'Pending Review — required'],
+  ];
+
+  if (hasSim) {
+    sections.push([lang === 'ar' ? 'سيناريو المحاكاة' : 'Simulation Scenario', Object.entries(simulation).filter(([, v]) => v !== 0).map(([k, v]) => `${k}: ${v > 0 ? '+' : ''}${v}`).join(' · ')]);
+    sections.push([lang === 'ar' ? 'ترتيب المحاكاة' : 'Simulated Ranking', rankedWithSim.map(s => `${s.id}${s.feasible ? '' : ' ⚠'}: ${s.total.toFixed(2)}`).join(' · ')]);
+  }
+
+  sections.push([lang === 'ar' ? 'الملخص النهائي' : 'Final Decision Summary',
+    top
+      ? (lang === 'ar'
+        ? `الاستراتيجية الأعلى ترتيبًا هي ${top.nameAr} بدرجة ${top.total.toFixed(2)}/10 بثقة ${Math.round(top.confidence * 100)}%.`
+        : `Top ranked strategy: ${top.name} at ${top.total.toFixed(2)}/10 with ${Math.round(top.confidence * 100)}% confidence.`)
+      : t('strategy.noFeasible')
+  ]);
+
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="no-print flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('reports.title')}</h2>
+          <p className="text-sm text-muted mt-0.5 max-w-2xl">{t('reports.sub')}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" icon="printer" onClick={() => window.print()}>{t('action.print')}</Button>
+          <Button size="sm" icon="download" onClick={() => window.print()}>{t('action.download')}</Button>
+        </div>
+      </div>
+
+      <Card className="print-page p-6 md:p-8">
+        <div className="flex items-start justify-between pb-4 border-b border-line mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-lg bg-forest text-white grid place-items-center font-extrabold">S</div>
+            <div>
+              <div className="font-extrabold text-forest text-sm tracking-wide">{t('brand')}</div>
+              <div className="text-[9px] tracking-[0.2em] text-muted font-bold">{t('brandSub')}</div>
+            </div>
+          </div>
+          <div className="text-end">
+            <div className="text-[10px] uppercase font-bold text-muted">{t('reports.generated')}</div>
+            <div className="text-xs font-semibold text-ink">{date}</div>
+            <div className="mt-1"><DataBadge small /></div>
+          </div>
+        </div>
+
+        <h1 className="text-xl md:text-2xl font-extrabold text-ink mb-1">
+          {lang === 'ar' ? 'تقرير قرار زراعي' : 'Agricultural Decision Report'}
+        </h1>
+        <p className="text-sm text-muted mb-2">
+          {lang === 'ar' ? farm.nameAr : farm.name} · {lang === 'ar' ? farm.locationAr : farm.location}
+          {field && <> · {lang === 'ar' ? field.nameAr : field.name}</>}
+        </p>
+
+        <div className="grid sm:grid-cols-3 gap-3 mb-6">
+          {[
+            [t('strategy.suitability'), top ? top.total.toFixed(2) + '/10' : '—'],
+            [t('strategy.confidence'), top ? Math.round(top.confidence * 100) + '%' : '—'],
+            [t('reports.farm'), top ? (lang === 'ar' ? top.nameAr : top.name) : t('strategy.noFeasible')],
+          ].map(([k, v]) => (
+            <div key={k} className="p-3 rounded-lg bg-lightsage/60">
+              <div className="text-[9px] uppercase font-bold text-muted tracking-wide">{k}</div>
+              <div className="text-sm font-bold text-forest mt-0.5">{v}</div>
+            </div>
+          ))}
+        </div>
+
+        <h2 className="text-sm font-extrabold text-ink mb-3 pb-1.5 border-b border-line">{t('reports.sections')}</h2>
+        <div className="space-y-2">
+          {sections.map(([title, body], i) => (
+            <div key={i} className="grid grid-cols-12 gap-3 py-2 border-b border-line last:border-0">
+              <div className="col-span-1 text-[11px] font-bold text-sage">{String(i + 1).padStart(2, '0')}</div>
+              <div className="col-span-4 text-[11px] font-bold text-ink">{title}</div>
+              <div className="col-span-7 text-[11px] text-muted leading-relaxed">{body}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 p-3 rounded-lg bg-warn/10 border border-warn/30 text-[10px] text-warn flex items-start gap-2">
+          <Icon name="alert" size={13} className="shrink-0 mt-0.5" />
+          {lang === 'ar'
+            ? 'هذا التقرير توضيحي ولا يمثل توصية علمية معتمدة. جميع البيانات تجريبية ولا تعكس أرصادًا حية. يجب إجراء فحص تربة ومراجعة خبير زراعي قبل التطبيق.'
+            : 'This report is illustrative and does not constitute an endorsed scientific recommendation. All data is demo data and does not reflect live observations. Soil testing and expert agronomist review are required before application.'}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   SETTINGS
+============================================================ */
+function SettingsPage({ lang, setLang }) {
+  const { t } = useT();
+  const [prefs, setPrefs] = useState({ units: 'metric', dateFormat: 'iso', notifications: true, dataPeriod: '12m', theme: 'light' });
+
+  return (
+    <div className="p-4 md:p-6 space-y-4 max-w-4xl">
+      <div>
+        <h2 className="text-xl md:text-2xl font-extrabold text-ink">{t('settings.title')}</h2>
+        <p className="text-sm text-muted mt-0.5">{t('settings.sub')}</p>
+      </div>
+
+      <Card className="p-4">
+        <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'الحساب' : 'Account'}</h3>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-full bg-forest text-white grid place-items-center font-bold">AH</div>
+          <div>
+            <div className="font-bold text-ink text-sm">Ahmed Hassan</div>
+            <div className="text-[11px] text-muted">ahmed@example.com · {t('role.farmer')}</div>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted">{lang === 'ar' ? 'هذا عرض تجريبي — لا يوجد مصادقة حقيقية.' : 'Demo only — no real authentication is implemented.'}</p>
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'التفضيلات' : 'Preferences'}</h3>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{lang === 'ar' ? 'اللغة' : 'Language'}</span>
+            <select value={lang} onChange={e => setLang(e.target.value)} className="w-full mt-1 px-2.5 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+              <option value="en">English</option><option value="ar">العربية</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{lang === 'ar' ? 'وحدات القياس' : 'Measurement units'}</span>
+            <select value={prefs.units} onChange={e => setPrefs({ ...prefs, units: e.target.value })} className="w-full mt-1 px-2.5 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+              <option value="metric">Metric (ha, °C, mm)</option><option value="imperial">Imperial (ac, °F, in)</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{lang === 'ar' ? 'تنسيق التاريخ' : 'Date format'}</span>
+            <select value={prefs.dateFormat} onChange={e => setPrefs({ ...prefs, dateFormat: e.target.value })} className="w-full mt-1 px-2.5 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+              <option value="iso">2025-06-12</option><option value="dmy">12/06/2025</option><option value="mdy">06/12/2025</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[10px] uppercase font-bold text-muted tracking-wide">{lang === 'ar' ? 'فترة البيانات المفضلة' : 'Preferred data period'}</span>
+            <select value={prefs.dataPeriod} onChange={e => setPrefs({ ...prefs, dataPeriod: e.target.value })} className="w-full mt-1 px-2.5 py-2 text-xs border border-line rounded-lg bg-white focus:outline-none">
+              <option value="3m">3 months</option><option value="6m">6 months</option><option value="12m">12 months</option>
+            </select>
+          </label>
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <input type="checkbox" checked={prefs.notifications} onChange={e => setPrefs({ ...prefs, notifications: e.target.checked })} className="accent-secondary" />
+          <span className="text-[11px] text-ink">{lang === 'ar' ? 'تفعيل الإشعارات' : 'Enable notifications'}</span>
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="font-bold text-ink text-sm mb-3">{lang === 'ar' ? 'العرض' : 'Display'}</h3>
+        <div className="flex gap-2">
+          {[{ k: 'light', label: lang === 'ar' ? 'فاتح' : 'Light' }, { k: 'dark', label: lang === 'ar' ? 'داكن' : 'Dark (demo)' }].map(o => (
+            <button key={o.k} onClick={() => setPrefs({ ...prefs, theme: o.k })}
+              className={`px-3 py-2 rounded-lg border text-xs font-semibold ${prefs.theme === o.k ? 'border-secondary bg-lightsage/60 text-forest' : 'border-line text-muted'}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted mt-2">{lang === 'ar' ? 'الوضع الداكن معروض كعنصر واجهة فقط في هذا الإصدار.' : 'Dark mode is exposed as a control only in this version.'}</p>
+      </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   APP SHELL
+============================================================ */
+const PAGE_TITLES = {
+  dashboard: 'nav.overview', farms: 'nav.farms', mapping: 'nav.mapping', intel: 'nav.intel',
+  goals: 'nav.goals', strategy: 'nav.strategy', simulator: 'nav.simulator', economics: 'nav.economics',
+  review: 'nav.review', reports: 'nav.reports', settings: 'nav.settings',
+};
+
+function App() {
+  const [lang, setLang] = useState('en');
+  const [route, setRoute] = useState('landing');
+  const [role, setRole] = useState('farmer');
+  const [farms, setFarms] = useState(FARMS_SEED);
+  const [fields, setFields] = useState(FIELDS_SEED);
+  const [activeFarmId, setActiveFarmId] = useState('farm-qalyubia');
+  const [activeFieldId, setActiveFieldId] = useState('fld-a');
+  const [goals, setGoals] = useState({ yield: 17, water: 17, soil: 17, profit: 17, resilience: 16, inputs: 16 });
+  const [constraints, setConstraints] = useState({ water: true, budget: false, crop: false, irrigation: false, equipment: false });
+  const [simulation, setSimulation] = useState({ temp: 0, rain: 0, water: 0, inputPrice: 0, marketPrice: 0 });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => { window.__setLang = setLang; }, []);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  }, [lang]);
+
+  // Sync field selection when farm changes
+  useEffect(() => {
+    const farmFields = fields.filter(f => f.farmId === activeFarmId);
+    if (!farmFields.find(f => f.id === activeFieldId) && farmFields.length > 0) {
+      setActiveFieldId(farmFields[0].id);
+    } else if (farmFields.length === 0) {
+      setActiveFieldId(null);
+    }
+  }, [activeFarmId, fields, activeFieldId]);
+
+  const activeField = fields.find(f => f.id === activeFieldId) || null;
+  const activeFarm = farms.find(f => f.id === activeFarmId);
+
+  const { t, dir } = useT();
+
+  const pageTitle = useMemo(() => PAGE_TITLES[route] ? t(PAGE_TITLES[route]) : t('brand'), [route, lang]);
+
+  let content;
+  switch (route) {
+    case 'landing':
+      content = <LandingPage setRoute={setRoute} seedFields={fields.filter(f => f.farmId === 'farm-qalyubia')} />;
+      break;
+    case 'dashboard':
+      content = <DashboardPage setRoute={setRoute} farms={farms} fields={fields} activeFarmId={activeFarmId}
+        activeField={activeField} role={role} goals={goals} constraints={constraints} />;
+      break;
+    case 'farms':
+      content = <FarmsPage farms={farms} fields={fields} setFarms={setFarms}
+        activeFarmId={activeFarmId} setActiveFarmId={setActiveFarmId}
+        setActiveFieldId={setActiveFieldId} setRoute={setRoute} />;
+      break;
+    case 'mapping':
+      content = <MappingPage farms={farms} fields={fields} setFields={setFields}
+        activeFarmId={activeFarmId} activeField={activeField}
+        setActiveFieldId={setActiveFieldId} setRoute={setRoute} />;
+      break;
+    case 'intel':
+      content = <IntelPage field={activeField} farm={activeFarm} />;
+      break;
+    case 'goals':
+      content = <GoalsPage goals={goals} setGoals={setGoals} constraints={constraints} setConstraints={setConstraints} setRoute={setRoute} />;
+      break;
+    case 'strategy':
+      content = <StrategyPage field={activeField} goals={goals} constraints={constraints} />;
+      break;
+    case 'simulator':
+      content = <SimulatorPage field={activeField} goals={goals} constraints={constraints}
+        simulation={simulation} setSimulation={setSimulation} />;
+      break;
+    case 'economics':
+      content = <EconomicsPage field={activeField} />;
+      break;
+    case 'review':
+      content = <ReviewPage field={activeField} goals={goals} constraints={constraints} />;
+      break;
+    case 'reports':
+      content = <ReportsPage farms={farms} activeFarmId={activeFarmId} field={activeField}
+        goals={goals} constraints={constraints} simulation={simulation} />;
+      break;
+    case 'settings':
+      content = <SettingsPage lang={lang} setLang={setLang} />;
+      break;
+    default:
+      content = <DashboardPage setRoute={setRoute} farms={farms} fields={fields} activeFarmId={activeFarmId}
+        activeField={activeField} role={role} goals={goals} constraints={constraints} />;
+  }
+
+  const isLanding = route === 'landing';
+
+  return (
+    <LangProvider lang={lang}>
+      <div dir={dir} className="min-h-screen bg-canvas">
+        {isLanding ? content : (
+          <div className="flex min-h-screen">
+            <Sidebar route={route} setRoute={setRoute} role={role} setRole={setRole} open={sidebarOpen} setOpen={setSidebarOpen} />
+            <div className="flex-1 min-w-0 flex flex-col">
+              <Topbar
+                farms={farms} fields={fields}
+                activeFarmId={activeFarmId} activeFieldId={activeFieldId}
+                setActiveFarmId={setActiveFarmId} setActiveFieldId={setActiveFieldId}
+                lang={lang} setLang={setLang} setOpen={setSidebarOpen} title={pageTitle} />
+              <main className="flex-1 min-w-0">{content}</main>
+              <footer className="no-print px-4 md:px-6 py-4 border-t border-line text-[10px] text-muted flex flex-wrap items-center justify-between gap-2">
+                <span>© 2025 SOLDOC Virtual Farm — concept demo, not for production agricultural use.</span>
+                <DataBadge small />
+              </footer>
+            </div>
+          </div>
+        )}
+      </div>
+    </LangProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
 </body>
 </html>
